@@ -1,0 +1,443 @@
+diff --git a/README.md b/README.md
+index 02e1718..f2d3766 100644
+--- a/README.md
++++ b/README.md
+@@ -1,4 +1,4 @@
+-# Cell Annealing Tool — 细胞退火工具
++# Cell Relaxation Tool — 细胞退火工具
+
+ [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+ [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+diff --git a/README_CN.md b/README_CN.md
+index 9729ca2..328b2b3 100644
+--- a/README_CN.md
++++ b/README_CN.md
+@@ -1,4 +1,4 @@
+-# 细胞退火工具 (Cell Annealing Tool)
++# 细胞退火工具 (Cell Relaxation(Annealing) Tool)
+
+ [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+ [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+@@ -9,7 +9,7 @@
+
+ 基于以下研究：
+
+-- 许凯，黄斌，翁力凡，王子涵，连钰洋， (2026). *整个二维细胞网络的对称松弛方法及其意义*. (arXiv: XuSR20260616)
++- Xu K., Weng L., Wang Z., Lian Y., Huang B. (2026). *A symmetric relaxation method for entire two-dimensional cellular networks and its implications*. (arXiv: XuSR20260616)
+ - Xu K. (2021). *A geometry-based relaxation algorithm for equilibrating a trivalent polygonal network in two dimensions and its implications*. Philosophical Magazine, 101(14), 1632-1653.
+
+ ---
+@@ -189,8 +189,7 @@ GUI 提供以下功能：
+ 如果本项目用于学术研究，请引用：
+
+ ```
+-许凯，黄斌，翁力凡，王子涵，连钰洋 (2026). 整个二维细胞网络的对称松弛方法及其意义.
+-arXiv: XuSR20260616.
++Xu K., Weng L., Wang Z., Lian Y., Huang B. (2026). *A symmetric relaxation method for entire two-dimensional cellular networks and its implications*. (arXiv: XuSR20260616)
+ ```
+
+ ```
+diff --git a/cell/CellData.py b/cell/CellData.py
+index 5e7494e..55a86f8 100644
+--- a/cell/CellData.py
++++ b/cell/CellData.py
+@@ -1,5 +1,4 @@
+ import numpy as np
+-import matplotlib.pyplot as plt
+ import time
+ import math
+ class CellData:
+diff --git a/initVoronoi.py b/initVoronoi.py
+index 7ec4166..72bafdc 100644
+--- a/initVoronoi.py
++++ b/initVoronoi.py
+@@ -218,14 +218,14 @@ def pretreatment(cells):
+     return cells
+
+
+-def getCells(param,param2,n):
+-    param=float(param)
+-    n=int(n)+1
+-    arr=new_vor(param,int(param2),n) # 整齐二维矩阵 Neat two-dimensional matrix
+-    vor = Voronoi(arr)  # 生成维诺图 Generate a vinot diagram
+-    cells = just(vor, n=n)
++def getCells(param, param2, n):
++    param_float = float(param)
++    n_int = int(n) + 1
++    param2_int = int(param2)
++    arr = new_vor(param_float, param2_int, n_int)
++    vor = Voronoi(arr)
++    cells = just(vor, n=n_int)
+     cells = pretreatment(cells)
+-    # print("cells number after==", len(cells))
+     return cells
+
+
+diff --git a/only_annealing_main.py b/only_annealing_main.py
+index 0549750..210ff0b 100644
+--- a/only_annealing_main.py
++++ b/only_annealing_main.py
+@@ -26,6 +26,14 @@
+ import datetime
+ import warnings
+
++# Windows DPI 感知设置（必须在导入 tkinter 之前）
++if sys.platform == 'win32':
++    try:
++        import ctypes
++        ctypes.windll.shcore.SetProcessDpiAwareness(1)
++    except Exception:
++        pass
++
+ # 强制切换工作目录到脚本所在位置
+ current_dir = os.path.dirname(os.path.abspath(__file__))
+ os.chdir(current_dir)
+@@ -33,10 +41,16 @@
+
+ import tkinter as tk
+ from tkinter import ttk, messagebox, simpledialog, filedialog
++
++# 初始化 Tk 根窗口（必须在导入 matplotlib 之前）
++root = tk.Tk()
++root.withdraw()
++root.tk.call('tk', 'scaling', 1.0)
++
+ import matplotlib
+ matplotlib.use('TkAgg')
+-import matplotlib.pyplot as plt
+-from matplotlib.backend_tools import ToolBase
++matplotlib.interactive(False)
++from matplotlib.figure import Figure
+ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+ import numpy as np
+
+@@ -49,9 +63,11 @@
+ import utillib.exportUtils as exportUtils
+
+ warnings.filterwarnings("ignore")
+-plt.rcParams['toolbar'] = 'toolmanager'
+-plt.rcParams['font.sans-serif'] = ['SimHei']
+-plt.rcParams['axes.unicode_minus'] = False
++
++matplotlib.rcParams['toolbar'] = 'toolbar2'
++matplotlib.rcParams['font.sans-serif'] = ['SimHei']
++matplotlib.rcParams['axes.unicode_minus'] = False
++matplotlib.rcParams['figure.dpi'] = 100
+
+ # ============================================================================
+ # 全局变量
+@@ -83,16 +99,15 @@ def get_ellipse(e_x, e_y, a, b, e_angle):
+     return x, y
+
+
+-def ViroinitData(params=None):
++def ViroinitData(cell_seed_str, param_str, param2_str='0'):
+     """维诺图初始化"""
+     global param2, cellSeed
+
+-    if params is None:
+-        params = {}
++    cellSeed = cell_seed_str
++    param = param_str
++    param2 = param2_str
+
+-    cellSeed = params.get('cellSeed', '10')
+-    param = params.get('param', '0.6')
+-    param2 = params.get('param2', '2')
++    print(f'[ViroinitData] param={param}, cellSeed={cellSeed}, param2={param2}')
+
+     if not cellSeed.isdigit() or int(cellSeed) < 3:
+         raise ValueError("种子值需为数字且大于3")
+@@ -287,28 +302,32 @@ def _create_cell_generation_section(self):
+         gen_frame.pack(fill=tk.X, padx=10, pady=5)
+         self._reg_font(gen_frame, 16, ('bold',))
+
+-        # 维诺图子类型
+         type_frame = tk.Frame(gen_frame, bg='#f0f0f0')
+         type_frame.pack(fill=tk.X, padx=8, pady=4)
+         w_lbl_type = tk.Label(type_frame, text="维诺图类型:", bg='#f0f0f0',
+                  font=self._f(14))
+         w_lbl_type.pack(side=tk.LEFT)
+         self._reg_font(w_lbl_type, 14)
+-        self.voronoi_subtype = tk.StringVar(value="grid")
++        self.current_mode = 'grid'
+         w_rb_grid = tk.Radiobutton(type_frame, text="随机扰动 n×n", value="grid",
+-                       variable=self.voronoi_subtype, bg='#f0f0f0',
+-                       font=self._f(13))
++                       bg='#f0f0f0', font=self._f(13),
++                       command=self._switch_to_grid)
+         w_rb_grid.pack(side=tk.LEFT, padx=4)
++        w_rb_grid.select()
+         self._reg_font(w_rb_grid, 13)
+         w_rb_random = tk.Radiobutton(type_frame, text="均匀随机", value="random",
+-                       variable=self.voronoi_subtype, bg='#f0f0f0',
+-                       font=self._f(13))
++                       bg='#f0f0f0', font=self._f(13),
++                       command=self._switch_to_random)
+         w_rb_random.pack(side=tk.LEFT, padx=4)
+         self._reg_font(w_rb_random, 13)
+
++        # 参数区域容器
++        self.params_container = tk.Frame(gen_frame, bg='#f0f0f0')
++        self.params_container.pack(fill=tk.X, padx=8, pady=2)
++
+         # 随机扰动 n×n 参数
+-        self.grid_frame = tk.Frame(gen_frame, bg='#f0f0f0')
+-        self.grid_frame.pack(fill=tk.X, padx=8, pady=2)
++        self.grid_frame = tk.Frame(self.params_container, bg='#f0f0f0')
++        self.grid_frame.pack(fill=tk.X)
+         row1 = tk.Frame(self.grid_frame, bg='#f0f0f0')
+         row1.pack(fill=tk.X)
+         w_lbl_seed = tk.Label(row1, text="n（种子值）:", bg='#f0f0f0',
+@@ -316,46 +335,33 @@ def _create_cell_generation_section(self):
+         w_lbl_seed.pack(side=tk.LEFT)
+         self._reg_font(w_lbl_seed, 13)
+         self.voronoi_seed = tk.StringVar(value="10")
+-        w_ent_seed = tk.Entry(row1, textvariable=self.voronoi_seed, width=8,
++        self.w_ent_seed = tk.Entry(row1, textvariable=self.voronoi_seed, width=8,
+                  font=self._f(13))
+-        w_ent_seed.pack(side=tk.LEFT, padx=4)
+-        self._reg_font(w_ent_seed, 13)
++        self.w_ent_seed.pack(side=tk.LEFT, padx=4)
++        self._reg_font(self.w_ent_seed, 13)
+         w_lbl_k = tk.Label(row1, text="k（扰动 0~1）:", bg='#f0f0f0',
+                  font=self._f(13))
+         w_lbl_k.pack(side=tk.LEFT, padx=(10, 0))
+         self._reg_font(w_lbl_k, 13)
+         self.voronoi_param = tk.StringVar(value="0.6")
+-        w_ent_param = tk.Entry(row1, textvariable=self.voronoi_param, width=8,
++        self.w_ent_param = tk.Entry(row1, textvariable=self.voronoi_param, width=8,
+                  font=self._f(13))
+-        w_ent_param.pack(side=tk.LEFT, padx=4)
+-        self._reg_font(w_ent_param, 13)
++        self.w_ent_param.pack(side=tk.LEFT, padx=4)
++        self._reg_font(self.w_ent_param, 13)
+
+-        # 完全随机维诺图参数
+-        self.random_frame = tk.Frame(gen_frame, bg='#f0f0f0')
++        # 均匀随机维诺图参数（只保留种子点数）
++        self.random_frame = tk.Frame(self.params_container, bg='#f0f0f0')
+         row_r = tk.Frame(self.random_frame, bg='#f0f0f0')
+-        row_r.pack(fill=tk.X, padx=8, pady=4)
+-        w_lbl_rand_n = tk.Label(row_r, text="种子点数:", bg='#f0f0f0',
++        row_r.pack(fill=tk.X)
++        w_lbl_rand_n = tk.Label(row_r, text="种子点数（平方数）:", bg='#f0f0f0',
+                  font=self._f(13))
+         w_lbl_rand_n.pack(side=tk.LEFT)
+         self._reg_font(w_lbl_rand_n, 13)
+         self.random_voronoi_seed = tk.StringVar(value="400")
+-        w_ent_rand_n = tk.Entry(row_r, textvariable=self.random_voronoi_seed, width=8,
+-                 font=self._f(13))
+-        w_ent_rand_n.pack(side=tk.LEFT, padx=4)
+-        self._reg_font(w_ent_rand_n, 13)
+-        w_lbl_scale = tk.Label(row_r, text="坐标范围:", bg='#f0f0f0',
++        self.w_ent_rand_n = tk.Entry(row_r, textvariable=self.random_voronoi_seed, width=8,
+                  font=self._f(13))
+-        w_lbl_scale.pack(side=tk.LEFT, padx=(10, 0))
+-        self._reg_font(w_lbl_scale, 13)
+-        self.random_voronoi_scale = tk.StringVar(value="")
+-        w_ent_scale = tk.Entry(row_r, textvariable=self.random_voronoi_scale, width=8,
+-                 font=self._f(13))
+-        w_ent_scale.pack(side=tk.LEFT, padx=4)
+-        self._reg_font(w_ent_scale, 13)
+-        w_lbl_hint = tk.Label(row_r, text="(留空=√n)", bg='#f0f0f0',
+-                 font=self._f(11))
+-        w_lbl_hint.pack(side=tk.LEFT)
+-        self._reg_font(w_lbl_hint, 11)
++        self.w_ent_rand_n.pack(side=tk.LEFT, padx=4)
++        self._reg_font(self.w_ent_rand_n, 13)
+
+         # 初始化按钮
+         self.init_btn = tk.Button(gen_frame, text="生成维诺图并初始化",
+@@ -365,16 +371,22 @@ def _create_cell_generation_section(self):
+         self.init_btn.pack(pady=8)
+         self._reg_font(self.init_btn, 14)
+
+-        # 子类型切换
+-        def _on_subtype_change(*_):
+-            if self.voronoi_subtype.get() == 'grid':
+-                self.grid_frame.pack(fill=tk.X, padx=8, pady=2)
+-                self.random_frame.pack_forget()
+-            else:
+-                self.grid_frame.pack_forget()
+-                self.random_frame.pack(fill=tk.X)
+-        self.voronoi_subtype.trace_add('write', _on_subtype_change)
+-        _on_subtype_change()
++        # 初始显示随机扰动界面
++        self._switch_to_grid()
++
++    def _switch_to_grid(self):
++        """切换到随机扰动模式"""
++        self.current_mode = 'grid'
++        self.grid_frame.pack(fill=tk.X)
++        self.random_frame.pack_forget()
++        self.params_container.update_idletasks()
++
++    def _switch_to_random(self):
++        """切换到均匀随机模式"""
++        self.current_mode = 'random'
++        self.grid_frame.pack_forget()
++        self.random_frame.pack(fill=tk.X)
++        self.params_container.update_idletasks()
+
+     def _create_annealing_section(self):
+         """创建退火参数区域"""
+@@ -560,16 +572,16 @@ def _pt_key(p):
+
+     def _init_matplotlib(self):
+         """初始化 matplotlib 画布"""
+-        self.fig = plt.figure(figsize=(12, 8))
++        self.fig = Figure(figsize=(12, 8))
+         self.canvas = FigureCanvasTkAgg(self.fig, self.right_canvas_frame)
+         self.canvas.draw()
+-        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+         # 自定义保存工具栏
+         class ImageExportToolbar(NavigationToolbar2Tk):
+             def save_figure(self, *args):
+                 file_path = filedialog.asksaveasfilename(
+                     title="保存图片",
++                    initialdir=os.path.expanduser("~"),
+                     defaultextension=".eps",
+                     filetypes=[("EPS 矢量图", "*.eps"), ("PNG 图片", "*.png")]
+                 )
+@@ -594,26 +606,7 @@ def save_figure(self, *args):
+         self.toolbar.pack(side=tk.TOP, fill=tk.X)
+         self.toolbar.update()
+
+-        # Reset View 按钮
+-        try:
+-            class HomeTool(ToolBase):
+-                description = 'Reset view'
+-                def trigger(inner_self, *args, **kwargs):
+-                    try:
+-                        ax = self.fig.axes[0]
+-                        ax.set_xlim(self._initial_xlim)
+-                        ax.set_ylim(self._initial_ylim)
+-                        self.canvas.draw_idle()
+-                    except Exception:
+-                        pass
+-
+-            manager = getattr(self.fig.canvas, 'manager', None)
+-            if manager is not None and getattr(manager, 'toolmanager', None):
+-                toolmanager = manager.toolmanager
+-                toolmanager.add_tool('ResetView', HomeTool)
+-                manager.toolbar.add_tool('ResetView', 'navigation')
+-        except Exception:
+-            pass
++        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+     # ========================================================================
+     # 核心功能方法
+@@ -624,16 +617,39 @@ def _init_system(self):
+         global cellData, annealer, cellSeed, param2
+
+         try:
+-            # 1. 参数校验
+-            if self.voronoi_subtype.get() == 'grid':
+-                seed_str = self.voronoi_seed.get().strip()
+-                param_str = self.voronoi_param.get().strip()
+-                if not seed_str or not param_str:
++            subtype = self.current_mode
++
++            self.w_ent_seed.update()
++            self.w_ent_param.update()
++            self.w_ent_rand_n.update()
++
++            seed_val = self.w_ent_seed.get().strip()
++            k_val = self.w_ent_param.get().strip()
++            rand_seed_val = self.w_ent_rand_n.get().strip()
++
++            print(f'[_init_system] subtype={subtype}, seed={seed_val}, k={k_val}, random_seed={rand_seed_val}')
++
++            if subtype == 'grid':
++                if not seed_val or not k_val:
+                     messagebox.showerror("参数缺失", "请填写完整的维诺图参数")
+                     return
++
++                if not seed_val.isdigit() or int(seed_val) < 3:
++                    messagebox.showerror("错误", "种子值需为数字且大于3")
++                    return
++
++                try:
++                    k_float = float(k_val)
++                    if k_float < 0.0 or k_float > 1.0:
++                        messagebox.showerror("错误", "扰乱参数需介于0.0到1.0之间")
++                        return
++                except ValueError:
++                    messagebox.showerror("错误", f"扰乱参数必须是数字，当前值: {k_val}")
++                    return
++
++                print(f'[_init_system] 准备生成随机扰动维诺图: n={seed_val}, k={k_float}')
+             else:
+-                seed_str = self.random_voronoi_seed.get().strip()
+-                if not seed_str:
++                if not rand_seed_val:
+                     messagebox.showerror("参数缺失", "请填写种子点数")
+                     return
+
+@@ -643,11 +659,10 @@ def _init_system(self):
+                 if not ok:
+                     return
+
+-            # 2. 生成细胞
+-            if self.voronoi_subtype.get() == 'random':
+-                n = int(self.random_voronoi_seed.get())
+-                scale_str = self.random_voronoi_scale.get().strip()
+-                scale = float(scale_str) if scale_str else None
++            if subtype == 'random':
++                n = int(rand_seed_val)
++                scale = None
++                print(f'[_init_system] 准备生成均匀随机维诺图: n={n}')
+                 cells = Viro.getCellsBySource('random', n=n, scale=scale)
+                 for cell in cells:
+                     for i in range(len(cell.points)):
+@@ -656,14 +671,9 @@ def _init_system(self):
+                 cellSeed = str(n)
+                 param2 = '0'
+             else:
+-                params = {
+-                    'cellSeed': self.voronoi_seed.get(),
+-                    'param': self.voronoi_param.get(),
+-                    'param2': '0'
+-                }
+-                cells = ViroinitData(params)
+-                cellSeed = params['cellSeed']
+-                param2 = params['param2']
++                cells = ViroinitData(seed_val, k_val, '0')
++                cellSeed = seed_val
++                param2 = '0'
+
+             cellData = CellData(cells)
+             cellData.flush(isGrow=True)
+@@ -957,7 +967,7 @@ def _display(self, show_ellipse=False, show_auxiliary_lines=False,
+                 self._initial_ylim = [min(all_y) - y_range * margin,
+                                       max(all_y) + y_range * margin]
+
+-        colors = plt.cm.tab20(np.linspace(0, 1, 20))
++        colors = matplotlib.cm.tab20(np.linspace(0, 1, 20))
+         color_list = ['#FF5722', '#009688', '#673AB7', '#FFC107', '#2196F3']
+         color_index = 0
+
+@@ -1074,6 +1084,7 @@ def _display(self, show_ellipse=False, show_auxiliary_lines=False,
+ # ============================================================================
+
+ if __name__ == "__main__":
+-    root = tk.Tk()
++    print("====== Running only_annealing_main.py ======")
++    root.deiconify()
+     app = AnnealingGUI(root)
+     root.mainloop()
+diff --git a/requirements.txt b/requirements.txt
+index e3554f6..343bbdb 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -14,7 +14,7 @@ scipy>=1.7.0
+ matplotlib>=3.4.0
+ openpyxl>=3.0.0
+ rpy2>=3.4.0
+-pyenvelope>=0.2.0
++pyenvelope>=0.1.0
+
+ # PyInstaller (打包用，如需打包为 exe)
+ # pyinstaller>=5.0.0

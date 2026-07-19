@@ -1,0 +1,20 @@
+# ============================================================================
+# 细胞退火工具 - Python 依赖
+# ============================================================================
+# 安装方法:
+#   pip install -r requirements.txt
+#
+# 打包方法 (PyInstaller):
+#   pip install pyinstaller
+#   pyinstaller --onefile --windowed only_annealing_main.py
+# ============================================================================
+
+numpy>=1.21.0
+scipy>=1.7.0
+matplotlib>=3.4.0
+openpyxl>=3.0.0
+rpy2>=3.4.0
+pyenvelope>=0.1.0
+
+# PyInstaller (打包用，如需打包为 exe)
+# pyinstaller>=5.0.0
