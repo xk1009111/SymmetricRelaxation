@@ -5,7 +5,7 @@
 
 > **[English](README.md)**
 
-本项目是**二维细胞网络对称松弛（退火）算法**的 Python 实现。从完整版 [CellSymRelax](https://github.com/) 项目中剥离了细胞增殖、拓扑变换等扩展功能，仅保留核心松弛功能：维诺图生成、顶点平衡、椭圆拟合和数据导出。
+本项目是**二维细胞网络对称松弛（退火）算法**的 Python 实现。从完整版 [CellSymRelax] 项目中剥离了细胞增殖、拓扑变换等扩展功能，仅保留核心松弛功能：维诺图生成、顶点平衡、椭圆拟合和数据导出。
 
 基于以下研究：
 
@@ -18,7 +18,7 @@
 
 ### 维诺图生成
 生成修剪的 Voronoi 网络：
-- **随机扰动 (n×n)** — 随机扰动正六边形网格的种子点坐标，扰动范围限定在正六边形内，参数 *k* 控制不规则度（0=正六边形，1=高度无序）。
+- **随机扰动 (n×n)** — 随机扰动正六边形网格的种子点坐标，扰动（菱形采样法）范围限定在正六边形内，参数 *k* 控制不规则度（0=正六边形，1=高度无序）。
 - **均匀随机** — 基于均匀随机点。
 
 ### 对称松弛（退火）
@@ -208,20 +208,20 @@ Philosophical Magazine, 101(14), 1632-1653.
 
 ---
 
-## Contributors
+## 贡献者
 
-## Project Lead & Core Algorithm Designer
-- **Kai Xu (许凯)** — Project initiator, lead designer of all core algorithms, code architecture planning and design. Developed the Chinese-English bilingual GUI with the assistance of Trae.
+### 项目负责人 & 核心算法设计
+- **许凯 (Kai Xu)** — 项目发起人，所有核心算法的首席设计师，代码架构规划与设计。在 Trae 协助下开发了中英文双语 GUI。
 
-## Core Technical Contributors
-- **Guowei Shi (史国威)** — Implemented the initial foundational code and original simulated annealing prototype.
-- **Lifan Weng (翁力凡), Zihan Wang (王子涵), Yuyang Lian (连钰洋), Bin Huang (黄斌)** — Conducted subsequent code refactoring, computational performance optimization, GUI functional improvement and supplementary internationalization support.
+### 核心技术贡献者
+- **史国威 (Guowei Shi)** — 实现了初始基础代码和原始模拟退火原型。
+- **翁力凡 (Lifan Weng)、王子涵 (Zihan Wang)、连钰洋 (Yuyang Lian)、黄斌 (Bin Huang)** — 进行了后续代码重构、计算性能优化、GUI功能改进和补充国际化支持。
 
 ---
 
 ## 联系方式
 
 **许凯 (Kai Xu)**
-- 邮箱: kaixu@jmu.edu.cn (主) / kxu2013@gmail.com (次)
+- 邮箱: kaixu@jmu.edu.cn / kxu2013@gmail.com
 - ORCID: [0000-0002-1341-1525](https://orcid.org/0000-0002-1341-1525)
-- 单位: 集美大学 水产学院 / 计算机工程学院
+- 单位: 集美大学 水产学院

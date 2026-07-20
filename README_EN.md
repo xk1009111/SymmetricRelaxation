@@ -18,7 +18,7 @@ Based on:
 
 ### Voronoi Network Generation
 Generate trimmed Voronoi networks:
-- **Hexagon random-disordered Voronoi (n×n)** — Randomly perturb the coordinates of seed points in a regular hexagonal grid, with perturbation range confined within the hexagon, controlled by parameter *k* (0 = regular hexagons, 1 = high disorder).
+- **Hexagon random-disordered Voronoi (n×n)** — Randomly perturb the coordinates of seed points in a regular hexagonal grid using the diamond sampling method, with perturbation range confined within the hexagon, controlled by parameter *k* (0 = regular hexagons, 1 = high disorder).
 - **Uniform Random Voronoi** — Based on uniformly random points.
 
 ### Symmetric Relaxation (Annealing)
@@ -191,14 +191,12 @@ The GUI provides:
 If you use this code in academic work, please cite:
 
 ```
-Xu K., Weng L., Wang Z., Lian Y., Huang B. (2026). A symmetric relaxation
-method for entire two-dimensional cellular networks and its implications.
+Xu K., Weng L., Wang Z., Lian Y., Huang B. (2026). A symmetric relaxation method for entire two-dimensional cellular networks and its implications.
 arXiv: XuSR20260616.
 ```
 
 ```
-Xu K. (2021). A geometry-based relaxation algorithm for equilibrating a
-trivalent polygonal network in two dimensions and its implications.
+Xu K. (2021). A geometry-based relaxation algorithm for equilibrating a trivalent polygonal network in two dimensions and its implications.
 Philosophical Magazine, 101(14), 1632-1653.
 ```
 
@@ -224,8 +222,8 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 ## Contact
 
 **Kai Xu**
-- Email: kaixu@jmu.edu.cn (primary) / kxu2013@gmail.com (secondary)
+- Email: kaixu@jmu.edu.cn / kxu2013@gmail.com
 - ORCID: [0000-0002-1341-1525](https://orcid.org/0000-0002-1341-1525)
-- Affiliation: Fisheries College / College of Computer Engineering, Jimei University, Xiamen, China
+- Affiliation: Fisheries College, Jimei University, Xiamen, China
 
 For questions, bug reports, or collaboration inquiries, please contact the corresponding author.
