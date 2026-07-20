@@ -140,9 +140,9 @@ def setup_portable_r():
     if _check_system_r():
         r_home = os.environ.get('R_HOME', '系统 PATH 中')
         msg.showinfo(status_title,
-            f"✅ 检测到系统中已安装 R\n\n"
+            f"✅ 检测到系统中已安装 R (System R detected)\n\n"
             f"R_HOME: {r_home}\n\n"
-            "将使用系统 R 进行椭圆拟合。")
+            "将使用系统 R 进行椭圆拟合。(Will use system R for ellipse fitting.)")
         return
 
     # —— 优先级 2：检测便携版 R_Dist ——
@@ -151,21 +151,21 @@ def setup_portable_r():
         r_path = _use_portable_r(base_path)
         _is_portable = True
         msg.showinfo(status_title,
-            f"✅ 使用便携版 R 环境 (Portable Mode)\n\n"
+            f"✅ 使用便携版 R 环境 (Using portable R environment)\n\n"
             f"路径: {r_path}\n\n"
-            "说明：未检测到系统 R，已自动挂载内置 R。")
+            "说明：未检测到系统 R，已自动挂载内置 R。(Note: System R not detected, built-in R auto-mounted.)")
         return
 
     # —— 均不可用 ——
     system_r_home = os.environ.get('R_HOME', '未检测到')
     msg.showwarning(status_title,
-        f"⚠️ 未找到可用的 R 环境\n\n"
+        f"⚠️ 未找到可用的 R 环境 (No available R environment found)\n\n"
         f"系统 R_HOME: {system_r_home}\n\n"
-        "椭圆拟合将降级为纯 Python 方式（最小二乘 / scipy LMG），"
-        "仍可正常使用，但精度可能略低于 R-LMG 算法。\n\n"
-        "如需恢复 R 拟合，请：\n"
-        "• 安装 R 并配置 R_HOME 环境变量，或\n"
-        f"• 将 R_Dist 文件夹放在: {base_path}")
+        "椭圆拟合将降级为纯 Python 方式（最小二乘 / scipy LMG），仍可正常使用，但精度可能略低于 R-LMG 算法。\n"
+        "(Ellipse fitting will fall back to pure Python mode (Least Squares / scipy LMG). Still usable, but accuracy may be slightly lower than R-LMG algorithm.)\n\n"
+        "如需恢复 R 拟合，请：(To restore R fitting, please:)\n"
+        "• 安装 R 并配置 R_HOME 环境变量，或 (• Install R and configure R_HOME environment variable, or)\n"
+        f"• 将 R_Dist 文件夹放在: {base_path} (• Place R_Dist folder at: {base_path})")
 
 # =========================================================================
 # 步骤 2：立即执行配置 (必须在 import rpy2 之前！)
