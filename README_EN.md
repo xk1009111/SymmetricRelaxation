@@ -5,7 +5,7 @@
 
 > **[中文版](README_CN.md)**
 
-A Python implementation of the **symmetric relaxation (annealing) algorithm** for entire 2D cellular networks. This is a focused version extracted from the complete [CellSymRelax](https://github.com/) project, containing only the core relaxation (annealing) functionality — Voronoi generation, vertex equilibration, ellipse fitting, and data export. All proliferation, topological transformation, and other extended features have been removed.
+A Python implementation of the **symmetric relaxation (annealing) algorithm** for entire 2D cellular networks. This is a focused version extracted from the complete CellSymRelax project, containing only the core relaxation (annealing) functionality — Voronoi generation, vertex equilibration, ellipse fitting, and data export. All proliferation, topological transformation, and other extended features have been removed.
 
 Based on:
 
@@ -18,7 +18,7 @@ Based on:
 
 ### Voronoi Network Generation
 Generate trimmed Voronoi networks:
-- **Hexagon random-disordered Voronoi (n×n)** — Randomly perturb the coordinates of seed points in a regular hexagonal grid using the diamond sampling method, with perturbation range confined within the hexagon, controlled by parameter *k* (0 = regular hexagons, 1 = high disorder).
+- **Hexagon random-disordered Voronoi (n×n)** — Randomly perturb the coordinates of seed points in a regular hexagonal grid using the rhombus-based sampling method, with perturbation range confined within the hexagon, controlled by parameter *k* (0 = regular hexagons, 1 = high disorder).
 - **Uniform Random Voronoi** — Based on uniformly random points.
 
 ### Symmetric Relaxation (Annealing)
@@ -211,7 +211,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 ## Contributors
 
 ## Project Lead & Core Algorithm Designer
-- **Kai Xu (许凯)** — Project initiator, lead designer of all core algorithms, code architecture planning and design. Developed the Chinese-English bilingual GUI with the assistance of Trae.
+- **Kai Xu (许凯)** — Project initiator, designer of all core algorithms, code architecture planning and design. Developed the Chinese-English bilingual GUI with the assistance of Trae.
 
 ## Core Technical Contributors
 - **Guowei Shi (史国威)** — Implemented the initial foundational code and original simulated annealing prototype.
