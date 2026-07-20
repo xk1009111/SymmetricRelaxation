@@ -210,6 +210,17 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ---
 
+## Contributors
+
+## Project Lead & Core Algorithm Designer
+- **Kai Xu (许凯)** — Project initiator, lead designer of all core algorithms, code architecture planning and design. Developed the Chinese-English bilingual GUI with the assistance of Trae.
+
+## Core Technical Contributors
+- **Guowei Shi (史国威)** — Implemented the initial foundational code and original simulated annealing prototype.
+- **Lifan Weng (翁力凡), Zihan Wang (王子涵), Yuyang Lian (连钰洋), Bin Huang (黄斌)** — Conducted subsequent code refactoring, computational performance optimization, GUI functional improvement and supplementary internationalization support.
+
+---
+
 ## Contact
 
 **Kai Xu**
