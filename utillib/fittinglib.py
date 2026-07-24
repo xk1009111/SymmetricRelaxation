@@ -342,29 +342,32 @@ def n_rotate(rotate_angle, value_x, value_y, point_x, point_y):  # 点绕点旋�
     rotate_new_point = [n_rotate_x, n_rotate_y]
     return rotate_new_point
 #-----------------------辅助函数end-test-----------------------------------------------
-def insert_points(points, center_point, rotate_angle):  # 传入参数为细胞顶点集合和逆时针旋转角度， 返回参数是更新后的细胞顶点集合
-    # The input parameters are cell vertex set and counter clockwise rotation angle,
-    # and the returned parameter is the updated cell vertex set
-    cell_sides = get_cell_sides(points)   # 获取细胞点集长度 Get the length of cell point set
-    i = 0
-    while i < cell_sides:  # 遍历所有细胞顶点 Traverse all cell vertices
-        ppp = points[i]  # 将细胞顶点赋值给ppp Assign cell vertex to ppp
-        r_point = [ppp[0], ppp[1]]  # r_point为未旋转的顶点 r_point is the vertex that is not rotated
-        new_rotate_point = n_rotate(math.radians(rotate_angle), r_point[0], r_point[1], center_point.x,
-                                    center_point.y)  # new_rotate_point为旋转后的顶点
-        new_rotate_point2 = n_rotate(math.radians(-rotate_angle), r_point[0], r_point[1], center_point.x,
-                                    center_point.y)  # new_rotate_point为旋转后的顶点
-        # new_rotate_point is the vertex after rotation
-        # points = Insert(points, i + 1, new_rotate_point)  # 将旋转后的新点插入点集中
-        # points = Insert(points, i - 1, new_rotate_point2)  # 将旋转后的新点插入点集中
-
-        points.append(new_rotate_point)
-        points.append(new_rotate_point2)
-
-        # Inserts the rotated new point into the point set
-        i = i + 1  # 插入之后i向后移两位 i moves back two bits after insertion
-        # cell_sides = cell_sides + 2  # 细胞顶点数量加一 Number of cell vertices plus one
-    return points  # 返回细胞顶点集合 Return to cell vertex set
+def insert_points(points, center_point, rotate_angle):
+    """
+    在每个顶点的前后插入旋转后的点，保持顶点顺序（顺时针或逆时针）
+    参数:
+        points: 细胞顶点集合（按顺序排列）
+        center_point: 旋转中心
+        rotate_angle: 旋转角度（度）
+    返回: 更新后的顶点集合（保持原有顺序）
+    """
+    result = []
+    n = len(points)
+    for i in range(n):
+        p = points[i]
+        r_point = [p[0], p[1]]
+        
+        new_rotate_point = n_rotate(math.radians(rotate_angle), r_point[0], r_point[1], center_point.x, center_point.y)
+        new_rotate_point2 = n_rotate(math.radians(-rotate_angle), r_point[0], r_point[1], center_point.x, center_point.y)
+        
+        prev_idx = (i - 1) % n
+        next_idx = (i + 1) % n
+        
+        result.append(new_rotate_point2)
+        result.append(p)
+        result.append(new_rotate_point)
+    
+    return result
 
 
 def find_center_point(can_shu):  # 求拟合椭圆中心点坐标 Find the center point coordinates of fitting ellipse
@@ -428,17 +431,16 @@ def judge_pp_distance(c_point, point_0):  # 判求点与点之间的距离，返
 def do_middle_insert_all(points, ori_points, index):
     first_point = ori_points[index]
     second_point = ori_points[index + 1]
-    #print("first_point",first_point)
-    #print("second_point",second_point)
     renew_point_x = (first_point[0] + second_point[0]) / 2
     renew_point_y = (first_point[1] + second_point[1]) / 2
     renew_point = [renew_point_x, renew_point_y]
-    #print("renew_point",renew_point)
-
-
-
-    points.append(renew_point)
-    # print("求集合", points)
+    
+    try:
+        idx = points.index(first_point)
+        points.insert(idx + 1, renew_point)
+    except ValueError:
+        points.append(renew_point)
+    
     return points
 
 def middle_insert_all(points, ori_points):
@@ -578,7 +580,7 @@ def judge_value_0203(can_shu, points, area, iterator, center_point, ori_points):
         # 规则B: 面积比异常
         ell_area = a * b * math.pi
         value_ratio = ell_area / area
-        if value_ratio > 3.0 or value_ratio < 0.2:
+        if value_ratio < 1.0 or value_ratio > 3.0:
             is_bad = True
             # print(f"检测到异常: 面积比 {value_ratio:.2f}")
 
@@ -655,11 +657,11 @@ def judge_value(can_shu, points, area, iterator, center_point, ori_points):
     if not is_valid:
         is_bad = True
     else:
-        # 【关键修改】 面积比阈值改为 5.0
+        # 【修改】 面积比阈值改为 1~3
         ell_area = a * b * math.pi
         if area > 0:
             value_ratio = ell_area / area
-            if value_ratio > 5.0: # 此处原为 3.0，现改为 5.0
+            if value_ratio < 1.0 or value_ratio > 3.0:
                 is_bad = True
 
         # 简单的中心漂移检查 (保留原逻辑或适当放宽)
@@ -1209,12 +1211,12 @@ def check_ls_quality(can_shu, points, poly_area):
             return False
 
         # --- 核心规则更改：面积比校验 ---
-        # 老师要求：面积比超过 5 时判断为异常
+        # 老师要求：面积比不在 1~3 范围内时判断为异常
         ellipse_area = math.pi * a * b
         if poly_area > 0:
             ratio = ellipse_area / poly_area
-            if ratio > 5.0: # 【此处已修改为 5.0】
-                # print(f"异常判定：面积比 {ratio:.2f} > 5.0")
+            if ratio < 1.0 or ratio > 3.0:
+                # print(f"异常判定：面积比 {ratio:.2f} 不在 1~3 范围内")
                 return False
 
         # (可选) 保留原有的重心校验逻辑，防止拟合偏离太远
@@ -1241,6 +1243,13 @@ def check_ls_quality(can_shu, points, poly_area):
     except Exception as e:
         print(f"校验过程出错: {e}")
         return False
+
+def check_ls_quality_v5(can_shu, points, poly_area):
+    """
+    V5版本的拟合质量检查，面积比合格范围为1.0~3.0
+    返回: True (合格), False (异常)
+    """
+    return check_ls_quality(can_shu, points, poly_area)
 
 def fitting_call_R_conicfit(points):
     """
@@ -1571,71 +1580,104 @@ def safe_get_area(can_shu):
 
 def fitting(points, center_point, area):
     """
-    [重写 V4.0] 满足老师要求的最终实现
-    逻辑：
-    1. 根据边数决定 首选算法(Primary) 和 备选算法(Secondary)。
-       - < 5边: 首选 R(LMG), 备选 LS(最小二乘)
-       - >=5边: 首选 LS(最小二乘), 备选 R(LMG)
-    2. 运行首选算法。
-    3. 检查首选算法是否异常 (面积比 > 5)。
-       - 如果正常: 直接返回。
-       - 如果异常: 运行备选算法。
-    4. 如果触发了备选算法，对比两个结果的面积，取面积较小者。
+    [重写 V5.0] 满足新要求的拟合逻辑
+    策略：
+    1. 边数 < 5（三角形、四边形）：
+       - 第一轮：直接用原始顶点拟合（不插值），首选R(LMG)，备选LS
+       - 如果不合格（面积比不在1~3）：第二轮用插值法（insert_points）拟合
+    2. 边数 >= 5：
+       - 第一轮：直接用原始顶点代数拟合
+       - 如果不合格（面积比不在1~3）：第二轮用插值法拟合
+    3. 面积比合格范围：1.0 ~ 3.0
     """
     ori_points = points[:]
     n_sides = len(points)
+    final_can_shu = None
 
-    # 1. 定义策略
     if n_sides < 5:
-        # 三/四边形：首选 R语言 LMG
-        func_primary = fitting_call_R_conicfit
-        func_secondary = re_ellipse_fitting
-    else:
-        # 五边及以上：首选 最小二乘法
-        func_primary = re_ellipse_fitting
-        func_secondary = fitting_call_R_conicfit
-
-    # 2. 执行首选算法
-    can_shu_1 = None
-    try:
-        can_shu_1 = func_primary(points)
-    except Exception as e:
-        print(f"首选算法出错: {e}")
-        can_shu_1 = None
-
-    # 3. 检查首选算法质量
-    # 如果 check_ls_quality 返回 True，说明结果在误差允许范围内（Ratio <= 5），直接采用
-    is_primary_ok = check_ls_quality(can_shu_1, points, area)
-
-    if is_primary_ok:
-        final_can_shu = can_shu_1
-    else:
-        # 4. 触发异常逻辑：执行备选算法
-        # print(">>> 首选算法异常(或失败)，尝试备选算法...")
-        can_shu_2 = None
+        # --- 边数 < 5：先顶点直接拟合，不行再插值 ---
+        
+        # 第一轮：直接用原始顶点拟合
+        can_shu_round1 = None
         try:
-            can_shu_2 = func_secondary(points)
+            can_shu_round1 = fitting_call_R_conicfit(points)
         except Exception as e:
-            print(f"备选算法出错: {e}")
-            can_shu_2 = None
-
-        # 5. 择优环节 (Competition)
-        # 即使备选算法算出来 ratio 也 > 5，只要它比首选算法的面积小，我们就认为它"更好"
-        area_1 = safe_get_area(can_shu_1)
-        area_2 = safe_get_area(can_shu_2)
-
-        if area_1 < area_2:
-            final_can_shu = can_shu_1
+            print(f"R拟合失败，回退到代数拟合: {e}")
+            try:
+                can_shu_round1 = re_ellipse_fitting(points)
+            except Exception as e2:
+                print(f"代数拟合也失败: {e2}")
+        
+        # 检查第一轮结果是否合格
+        if can_shu_round1 is not None:
+            is_round1_ok = check_ls_quality_v5(can_shu_round1, points, area)
+            if is_round1_ok:
+                final_can_shu = can_shu_round1
+            else:
+                # 第二轮：用插值法拟合
+                interpolated_points = insert_points(points[:], center_point, 5)
+                try:
+                    final_can_shu = fitting_call_R_conicfit(interpolated_points)
+                except Exception as e:
+                    try:
+                        final_can_shu = re_ellipse_fitting(interpolated_points)
+                    except Exception as e2:
+                        final_can_shu = can_shu_round1
         else:
-            final_can_shu = can_shu_2
+            # 第一轮完全失败，尝试插值法
+            interpolated_points = insert_points(points[:], center_point, 5)
+            try:
+                final_can_shu = fitting_call_R_conicfit(interpolated_points)
+            except Exception as e:
+                try:
+                    final_can_shu = re_ellipse_fitting(interpolated_points)
+                except Exception:
+                    final_can_shu = None
 
-    # 6. 最终保底与格式化
-    # 如果两个都挂了（都是None或Inf），这里会做一个强制的代数拟合保底
+    else:
+        # --- 边数 >= 5：先代数法，不行再插值 ---
+        
+        # 第一轮：代数拟合
+        can_shu_round1 = None
+        try:
+            can_shu_round1 = re_ellipse_fitting(points)
+        except Exception as e:
+            print(f"代数拟合失败: {e}")
+        
+        # 检查第一轮结果是否合格
+        if can_shu_round1 is not None:
+            is_round1_ok = check_ls_quality_v5(can_shu_round1, points, area)
+            if is_round1_ok:
+                final_can_shu = can_shu_round1
+            else:
+                # 第二轮：用插值法拟合
+                interpolated_points = insert_points(points[:], center_point, 5)
+                try:
+                    final_can_shu = fitting_call_R_conicfit(interpolated_points)
+                except Exception as e:
+                    try:
+                        final_can_shu = re_ellipse_fitting(interpolated_points)
+                    except Exception as e2:
+                        final_can_shu = can_shu_round1
+        else:
+            # 第一轮完全失败，尝试插值法
+            interpolated_points = insert_points(points[:], center_point, 5)
+            try:
+                final_can_shu = fitting_call_R_conicfit(interpolated_points)
+            except Exception as e:
+                try:
+                    final_can_shu = re_ellipse_fitting(interpolated_points)
+                except Exception:
+                    final_can_shu = None
+
+    # 最终保底
     if final_can_shu is None or safe_get_area(final_can_shu) == float('inf'):
-        final_can_shu = re_ellipse_fitting(points)
+        try:
+            final_can_shu = re_ellipse_fitting(points)
+        except Exception:
+            final_can_shu = None
 
-    # 最后通过 judge_value 进行一次最终校验 (防止 NaN 等极端情况漏网)
-    # 注意：iterator 设为 5 可以避免 judge_value 内部再次触发复杂的旋转递归，仅做 MBR 保底检查
-    final_can_shu = judge_value(final_can_shu, points, area, 5, center_point, ori_points)
+    if final_can_shu is not None:
+        final_can_shu = judge_value(final_can_shu, points, area, 5, center_point, ori_points)
 
     return final_can_shu
