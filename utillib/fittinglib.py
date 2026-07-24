@@ -509,9 +509,11 @@ def judge_value_1(can_shu, points, area, iterator, center_point, ori_points):
 
     return can_shu
 
-def check_validity(a, b):
+def check_validity(a, b, strict_aspect=True):
     """
     [辅助验证] 检查长短轴是否合法
+    参数:
+        strict_aspect: 是否严格检查扁平率。对于少边形（边数<5）应设为False
     返回: (是否合法, 错误原因字符串)
     """
     # 1. 检查是否为 NaN 或 Inf (数学计算错误)
@@ -522,14 +524,16 @@ def check_validity(a, b):
     if a < 1e-6 or b < 1e-6:
         return False, "轴长接近0"
 
-    # 3. [关键修改] 检查扁平率 (Aspect Ratio)
+    # 3. 检查扁平率 (Aspect Ratio)
     # 正常的细胞大多是圆润的。如果 长轴 / 短轴 > 5，说明拟合出了一个极其扁长的形状
-    major = max(a, b)
-    minor = min(a, b)
-    ratio = major / minor
+    # 对于少边形（如三角形），放宽此检查，因为R拟合的结果本身是可靠的
+    if strict_aspect:
+        major = max(a, b)
+        minor = min(a, b)
+        ratio = major / minor
 
-    if ratio > 5.0: # 阈值可调：如果允许细胞很长，可以设为 8.0
-        return False, f"形状太扁(比例 {ratio:.1f})"
+        if ratio > 5.0:
+            return False, f"形状太扁(比例 {ratio:.1f})"
 
     return True, "正常"
 
@@ -549,7 +553,8 @@ def judge_value_0203(can_shu, points, area, iterator, center_point, ori_points):
         a, b, fit_cx, fit_cy = float('nan'), float('nan'), 0, 0
 
     # --- 2. 几何参数合法性检查 (新增) ---
-    is_valid, reason = check_validity(a, b)
+    n_sides = len(ori_points)
+    is_valid, reason = check_validity(a, b, strict_aspect=(n_sides >= 5))
 
     # --- 3. 原始数据特征 ---
     pts_np = np.array(ori_points)
@@ -631,6 +636,7 @@ def judge_value(can_shu, points, area, iterator, center_point, ori_points):
     """
     [修改] 校验与修正逻辑
     更改点：将面积比阈值从 3.0 调整为 5.0
+    新增：对少边形（边数<5）放宽扁平率检查
     """
     try:
         a = find_a(can_shu)
@@ -640,7 +646,8 @@ def judge_value(can_shu, points, area, iterator, center_point, ori_points):
     except Exception:
         a, b, fit_cx, fit_cy = float('nan'), float('nan'), 0, 0
 
-    is_valid, reason = check_validity(a, b)
+    n_sides = len(ori_points)
+    is_valid, reason = check_validity(a, b, strict_aspect=(n_sides >= 5))
 
     # --- 异常判断 ---
     is_bad = False
