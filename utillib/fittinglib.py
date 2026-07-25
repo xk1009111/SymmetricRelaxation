@@ -576,8 +576,6 @@ def judge_value_0203(can_shu, points, area, iterator, center_point, ori_points):
 
     # --- 3. 原始数据特征 ---
     pts_np = np.array(ori_points)
-    centroid_x = np.mean(pts_np[:, 0])
-    centroid_y = np.mean(pts_np[:, 1])
 
     # 计算细胞物理跨度
     min_x, max_x = np.min(pts_np[:, 0]), np.max(pts_np[:, 0])
@@ -599,12 +597,6 @@ def judge_value_0203(can_shu, points, area, iterator, center_point, ori_points):
         if value_ratio < 1.0 or value_ratio > 3.0:
             is_bad = True
             # print(f"检测到异常: 面积比 {value_ratio:.2f}")
-
-        # 规则C: 中心漂移异常
-        dist = math.sqrt((fit_cx - centroid_x)**2 + (fit_cy - centroid_y)**2)
-        if dist > (max_span * 1.5):
-            is_bad = True
-            # print(f"检测到异常: 中心偏移 {dist:.2f}")
 
     # --- 5. 异常处理流程 (状态机) ---
     if is_bad:
@@ -678,18 +670,6 @@ def judge_value(can_shu, points, area, iterator, center_point, ori_points):
             value_ratio = ell_area / area
             if value_ratio < 1.0 or value_ratio > 3.0:
                 is_bad = True
-
-        pts_np = np.array(ori_points)
-        centroid_x = np.mean(pts_np[:, 0])
-        centroid_y = np.mean(pts_np[:, 1])
-        dist = math.sqrt((fit_cx - centroid_x)**2 + (fit_cy - centroid_y)**2)
-
-        min_x, max_x = np.min(pts_np[:, 0]), np.max(pts_np[:, 0])
-        min_y, max_y = np.min(pts_np[:, 1]), np.max(pts_np[:, 1])
-        max_span = max(max_x - min_x, max_y - min_y)
-
-        if dist > (max_span * 2.0):
-            is_bad = True
 
     # --- 异常处理：不再尝试插值法，直接返回当前结果 ---
     # 所有拟合策略已经在 fitting() 函数中完成
@@ -1146,30 +1126,9 @@ def check_ls_quality_0203(can_shu, points, poly_area):
         ellipse_area = math.pi * a * b
         if poly_area > 0:
             ratio = ellipse_area / poly_area
-            if ratio > 5:
-                # print(f"异常判定：面积比 {ratio:.2f} > 3")
+            if ratio < 1.0 or ratio > 3.0:
+                # print(f"异常判定：面积比 {ratio:.2f} 不在 1~3 范围内")
                 return False
-
-        # --- 规则 2：多边形重心是否在椭圆内 ---
-        # 计算多边形重心
-        pts_np = np.array(points)
-        poly_center = np.mean(pts_np, axis=0)
-        px, py = poly_center[0], poly_center[1]
-
-        # 将多边形重心代入椭圆方程验证： (x'/a)^2 + (y'/b)^2 <= 1
-        # 先将点平移并旋转到标准坐标系
-        cos_t = math.cos(-theta)
-        sin_t = math.sin(-theta)
-        dx = px - cx
-        dy = py - cy
-        tx = dx * cos_t - dy * sin_t
-        ty = dx * sin_t + dy * cos_t
-
-        ell_dist = (tx / a)**2 + (ty / b)**2
-
-        if ell_dist > 1.0:
-            # print(f"异常判定：重心在椭圆外 (值={ell_dist:.2f})")
-            return False
 
         return True
 
@@ -1202,25 +1161,6 @@ def check_ls_quality(can_shu, points, poly_area):
             if ratio < 1.0 or ratio > 3.0:
                 # print(f"异常判定：面积比 {ratio:.2f} 不在 1~3 范围内")
                 return False
-
-        # (可选) 保留原有的重心校验逻辑，防止拟合偏离太远
-        cx, cy = find_center_point(can_shu)
-        theta = find_angle(can_shu)
-        pts_np = np.array(points)
-        poly_center = np.mean(pts_np, axis=0)
-        px, py = poly_center[0], poly_center[1]
-
-        # 验证重心是否在椭圆内 (简单校验)
-        cos_t = math.cos(-theta)
-        sin_t = math.sin(-theta)
-        dx = px - cx
-        dy = py - cy
-        tx = dx * cos_t - dy * sin_t
-        ty = dx * sin_t + dy * cos_t
-        ell_dist = (tx / a)**2 + (ty / b)**2
-
-        if ell_dist > 1.5: # 稍微放宽一点重心漂移的容忍度
-            return False
 
         return True
 
