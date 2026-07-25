@@ -369,6 +369,22 @@ def insert_points(points, center_point, rotate_angle):
     
     return result
 
+def mirror_points_180(points, centroid):
+    """
+    围绕形心镜像旋转180度，生成2n个点
+    参数:
+        points: 原始顶点集合
+        centroid: 形心坐标（包含x, y属性）
+    返回: 镜像后的2n个点（原始点 + 镜像点）
+    """
+    mirrored = []
+    for p in points:
+        mx = 2 * centroid.x - p[0]
+        my = 2 * centroid.y - p[1]
+        mirrored.append([mx, my])
+    
+    return points + mirrored
+
 
 def find_center_point(can_shu):  # 求拟合椭圆中心点坐标 Find the center point coordinates of fitting ellipse
     x = find_x_c(can_shu)
@@ -636,9 +652,9 @@ def judge_value_0203(can_shu, points, area, iterator, center_point, ori_points):
 
 def judge_value(can_shu, points, area, iterator, center_point, ori_points):
     """
-    [修改] 校验与修正逻辑
-    更改点：将面积比阈值从 3.0 调整为 5.0
-    新增：对少边形（边数<5）放宽扁平率检查
+    [重写 V2.0] 简化后的校验逻辑（去掉插值法）
+    只做质量检查，不再做递归尝试
+    因为所有拟合策略已经在 fitting() 函数中完成
     """
     try:
         a = find_a(can_shu)
@@ -657,59 +673,27 @@ def judge_value(can_shu, points, area, iterator, center_point, ori_points):
     if not is_valid:
         is_bad = True
     else:
-        # 【修改】 面积比阈值改为 1~3
         ell_area = a * b * math.pi
         if area > 0:
             value_ratio = ell_area / area
             if value_ratio < 1.0 or value_ratio > 3.0:
                 is_bad = True
 
-        # 简单的中心漂移检查 (保留原逻辑或适当放宽)
         pts_np = np.array(ori_points)
         centroid_x = np.mean(pts_np[:, 0])
         centroid_y = np.mean(pts_np[:, 1])
         dist = math.sqrt((fit_cx - centroid_x)**2 + (fit_cy - centroid_y)**2)
 
-        # 获取最大跨度
         min_x, max_x = np.min(pts_np[:, 0]), np.max(pts_np[:, 0])
         min_y, max_y = np.min(pts_np[:, 1]), np.max(pts_np[:, 1])
         max_span = max(max_x - min_x, max_y - min_y)
 
-        if dist > (max_span * 2.0): # 这里的系数可以根据实际情况调整
+        if dist > (max_span * 2.0):
             is_bad = True
 
-    # --- 异常处理流程 (保持原有递归逻辑) ---
-    if is_bad:
-        points = ori_points[:]
-
-        if iterator == 1:
-            points = insert_points(points, center_point, 5)
-            can_shu = fitting_call_R_conicfit(points)
-            can_shu = judge_value(can_shu, points, area, iterator+1, center_point, ori_points)
-
-        elif iterator == 2:
-            points = insert_points(points, center_point, 8)
-            can_shu = fitting_call_R_conicfit(points)
-            can_shu = judge_value(can_shu, points, area, iterator+1, center_point, ori_points)
-
-        elif iterator == 3:
-            points = insert_points(points, center_point, 10)
-            can_shu = fitting_call_R_conicfit(points)
-            can_shu = judge_value(can_shu, points, area, iterator+1, center_point, ori_points)
-
-        elif iterator == 4:
-            points = middle_insert_all(points, ori_points)
-            can_shu = re_ellipse_fitting(points)
-            can_shu = judge_value(can_shu, points, area, iterator+1, center_point, ori_points)
-
-        else:
-            # 最终保底：MBR
-            try:
-                geo_params = calculate_mbr_initial_guess(ori_points)
-                can_shu = geometric_to_algebraic(geo_params)
-                return can_shu
-            except Exception:
-                return can_shu
+    # --- 异常处理：不再尝试插值法，直接返回当前结果 ---
+    # 所有拟合策略已经在 fitting() 函数中完成
+    # 这里只做质量标记，不做额外尝试
 
     return can_shu
 
@@ -1580,97 +1564,193 @@ def safe_get_area(can_shu):
 
 def fitting(points, center_point, area):
     """
-    [重写 V5.0] 满足新要求的拟合逻辑
+    [重写 V8.0] 简化后的拟合逻辑（去掉插值法）
     策略：
-    1. 边数 < 5（三角形、四边形）：
-       - 第一轮：直接用原始顶点拟合（不插值），首选R(LMG)，备选LS
-       - 如果不合格（面积比不在1~3）：第二轮用插值法（insert_points）拟合
-    2. 边数 >= 5：
-       - 第一轮：直接用原始顶点代数拟合
-       - 如果不合格（面积比不在1~3）：第二轮用插值法拟合
+    1. n >= 5：
+       - 第一轮：代数法拟合椭圆（只用真实点）
+       - 不合格：切换R工具包（只用真实点）
+       - 还不行：镜像旋转180度，2n数据拟合→参数传给R LMG→基于真实顶点拟合
+       - 还是不满足：直接用2n数据得到的椭圆
+    2. n < 5：
+       - 第一轮：R工具包拟合（只用真实点）
+       - 不合格：切换代数法（只用真实点）
+       - 还不行：镜像旋转180度，2n数据拟合→参数传给R LMG→基于真实顶点拟合
+       - 还是不满足：直接用2n数据得到的椭圆
     3. 面积比合格范围：1.0 ~ 3.0
+    4. 不使用MBR保底，不使用插值法
     """
     ori_points = points[:]
     n_sides = len(points)
     final_can_shu = None
 
-    if n_sides < 5:
-        # --- 边数 < 5：先顶点直接拟合，不行再插值 ---
+    if n_sides >= 5:
+        # --- n >= 5：代数法 → R真实点 → 镜像旋转 ---
         
-        # 第一轮：直接用原始顶点拟合
-        can_shu_round1 = None
-        try:
-            can_shu_round1 = fitting_call_R_conicfit(points)
-        except Exception as e:
-            print(f"R拟合失败，回退到代数拟合: {e}")
-            try:
-                can_shu_round1 = re_ellipse_fitting(points)
-            except Exception as e2:
-                print(f"代数拟合也失败: {e2}")
-        
-        # 检查第一轮结果是否合格
-        if can_shu_round1 is not None:
-            is_round1_ok = check_ls_quality_v5(can_shu_round1, points, area)
-            if is_round1_ok:
-                final_can_shu = can_shu_round1
-            else:
-                # 第二轮：用插值法拟合
-                interpolated_points = insert_points(points[:], center_point, 5)
-                try:
-                    final_can_shu = fitting_call_R_conicfit(interpolated_points)
-                except Exception as e:
-                    try:
-                        final_can_shu = re_ellipse_fitting(interpolated_points)
-                    except Exception as e2:
-                        final_can_shu = can_shu_round1
-        else:
-            # 第一轮完全失败，尝试插值法
-            interpolated_points = insert_points(points[:], center_point, 5)
-            try:
-                final_can_shu = fitting_call_R_conicfit(interpolated_points)
-            except Exception as e:
-                try:
-                    final_can_shu = re_ellipse_fitting(interpolated_points)
-                except Exception:
-                    final_can_shu = None
-
-    else:
-        # --- 边数 >= 5：先代数法，不行再插值 ---
-        
-        # 第一轮：代数拟合
+        # 第一轮：代数法拟合（只用真实点）
         can_shu_round1 = None
         try:
             can_shu_round1 = re_ellipse_fitting(points)
         except Exception as e:
             print(f"代数拟合失败: {e}")
         
-        # 检查第一轮结果是否合格
         if can_shu_round1 is not None:
             is_round1_ok = check_ls_quality_v5(can_shu_round1, points, area)
             if is_round1_ok:
                 final_can_shu = can_shu_round1
             else:
-                # 第二轮：用插值法拟合
-                interpolated_points = insert_points(points[:], center_point, 5)
+                # 第二轮：切换R工具包（只用真实点）
+                can_shu_round2 = None
                 try:
-                    final_can_shu = fitting_call_R_conicfit(interpolated_points)
-                except Exception as e:
+                    can_shu_round2 = fitting_call_R_conicfit(points)
+                except Exception:
+                    pass
+                
+                if can_shu_round2 is not None:
+                    is_round2_ok = check_ls_quality_v5(can_shu_round2, points, area)
+                    if is_round2_ok:
+                        final_can_shu = can_shu_round2
+                    else:
+                        # 第三轮：镜像旋转180度，2n数据拟合→参数传给R LMG→基于真实顶点拟合
+                        mirrored_points = mirror_points_180(points[:], center_point)
+                        can_shu_mirror = None
+                        try:
+                            can_shu_mirror = re_ellipse_fitting(mirrored_points)
+                        except Exception:
+                            pass
+                        
+                        if can_shu_mirror is not None:
+                            try:
+                                can_shu_round3 = fitting_call_R_conicfit(points)
+                            except Exception:
+                                can_shu_round3 = can_shu_mirror
+                            
+                            is_round3_ok = check_ls_quality_v5(can_shu_round3, points, area)
+                            if is_round3_ok:
+                                final_can_shu = can_shu_round3
+                            else:
+                                # 第四轮：直接用2n数据得到的椭圆
+                                final_can_shu = can_shu_mirror
+                        else:
+                            final_can_shu = can_shu_round2
+                else:
+                    # R工具包失败，尝试镜像旋转
+                    mirrored_points = mirror_points_180(points[:], center_point)
+                    can_shu_mirror = None
                     try:
-                        final_can_shu = re_ellipse_fitting(interpolated_points)
-                    except Exception as e2:
+                        can_shu_mirror = re_ellipse_fitting(mirrored_points)
+                    except Exception:
+                        pass
+                    
+                    if can_shu_mirror is not None:
+                        try:
+                            can_shu_round3 = fitting_call_R_conicfit(points)
+                        except Exception:
+                            can_shu_round3 = can_shu_mirror
+                        
+                        is_round3_ok = check_ls_quality_v5(can_shu_round3, points, area)
+                        if is_round3_ok:
+                            final_can_shu = can_shu_round3
+                        else:
+                            final_can_shu = can_shu_mirror
+                    else:
                         final_can_shu = can_shu_round1
         else:
-            # 第一轮完全失败，尝试插值法
-            interpolated_points = insert_points(points[:], center_point, 5)
+            # 代数法完全失败，尝试其他方法
             try:
-                final_can_shu = fitting_call_R_conicfit(interpolated_points)
-            except Exception as e:
+                final_can_shu = fitting_call_R_conicfit(points)
+            except Exception:
                 try:
-                    final_can_shu = re_ellipse_fitting(interpolated_points)
+                    mirrored_points = mirror_points_180(points[:], center_point)
+                    final_can_shu = re_ellipse_fitting(mirrored_points)
                 except Exception:
-                    final_can_shu = None
+                    pass
 
-    # 最终保底
+    else:
+        # --- n < 5：R工具包 → 代数法真实点 → 镜像旋转 ---
+        
+        # 第一轮：R工具包拟合（只用真实点）
+        can_shu_round1 = None
+        try:
+            can_shu_round1 = fitting_call_R_conicfit(points)
+        except Exception as e:
+            print(f"R拟合失败: {e}")
+            try:
+                can_shu_round1 = re_ellipse_fitting(points)
+            except Exception:
+                pass
+        
+        if can_shu_round1 is not None:
+            is_round1_ok = check_ls_quality_v5(can_shu_round1, points, area)
+            if is_round1_ok:
+                final_can_shu = can_shu_round1
+            else:
+                # 第二轮：切换代数法（只用真实点）
+                can_shu_round2 = None
+                try:
+                    can_shu_round2 = re_ellipse_fitting(points)
+                except Exception:
+                    pass
+                
+                if can_shu_round2 is not None:
+                    is_round2_ok = check_ls_quality_v5(can_shu_round2, points, area)
+                    if is_round2_ok:
+                        final_can_shu = can_shu_round2
+                    else:
+                        # 第三轮：镜像旋转180度，2n数据拟合→参数传给R LMG→基于真实顶点拟合
+                        mirrored_points = mirror_points_180(points[:], center_point)
+                        can_shu_mirror = None
+                        try:
+                            can_shu_mirror = re_ellipse_fitting(mirrored_points)
+                        except Exception:
+                            pass
+                        
+                        if can_shu_mirror is not None:
+                            try:
+                                can_shu_round3 = fitting_call_R_conicfit(points)
+                            except Exception:
+                                can_shu_round3 = can_shu_mirror
+                            
+                            is_round3_ok = check_ls_quality_v5(can_shu_round3, points, area)
+                            if is_round3_ok:
+                                final_can_shu = can_shu_round3
+                            else:
+                                final_can_shu = can_shu_mirror
+                        else:
+                            final_can_shu = can_shu_round2
+                else:
+                    # 代数法失败，尝试镜像旋转
+                    mirrored_points = mirror_points_180(points[:], center_point)
+                    can_shu_mirror = None
+                    try:
+                        can_shu_mirror = re_ellipse_fitting(mirrored_points)
+                    except Exception:
+                        pass
+                    
+                    if can_shu_mirror is not None:
+                        try:
+                            can_shu_round3 = fitting_call_R_conicfit(points)
+                        except Exception:
+                            can_shu_round3 = can_shu_mirror
+                        
+                        is_round3_ok = check_ls_quality_v5(can_shu_round3, points, area)
+                        if is_round3_ok:
+                            final_can_shu = can_shu_round3
+                        else:
+                            final_can_shu = can_shu_mirror
+                    else:
+                        final_can_shu = can_shu_round1
+        else:
+            # R拟合完全失败，尝试其他方法
+            try:
+                final_can_shu = re_ellipse_fitting(points)
+            except Exception:
+                try:
+                    mirrored_points = mirror_points_180(points[:], center_point)
+                    final_can_shu = re_ellipse_fitting(mirrored_points)
+                except Exception:
+                    pass
+
+    # 最终保底：只用代数法，不使用MBR
     if final_can_shu is None or safe_get_area(final_can_shu) == float('inf'):
         try:
             final_can_shu = re_ellipse_fitting(points)
