@@ -472,61 +472,6 @@ def middle_insert_all(points, ori_points):
             break
     return points
 
-def judge_value_1(can_shu, points, area, iterator, center_point, ori_points):
-    a = find_a(can_shu)
-    b = find_b(can_shu)
-    ell_area = a*b*math.pi
-    value = ell_area / area
-
-    if value > 3:
-        points = ori_points[:] # points回退到原始状态，准备重新插值
-
-        if iterator == 1: # 第一次异常，进行5度旋转测试
-            print("第一次异常，进行5度旋转测试")
-            points = insert_points(points, center_point, 5)
-
-            # [修改] 原为 re_ellipse_fitting(points)
-            # 现改为 R 语言拟合，如果 R 失败，该函数内部会自动回退到代数拟合
-            can_shu = fitting_call_R_conicfit(points)
-
-            can_shu = judge_value(can_shu, points, area, iterator+1, center_point, ori_points)
-
-        elif iterator==2: # 第二次异常，进行8度旋转测试
-            print("第二次异常，进行8度旋转测试")
-            points = insert_points(points, center_point, 8)
-
-            # [修改] 原为 re_ellipse_fitting(points)
-            # 现改为 R 语言拟合
-            can_shu = fitting_call_R_conicfit(points)
-
-            can_shu = judge_value(can_shu, points, area, iterator+1, center_point, ori_points)
-
-        elif iterator==3: # 第三次异常，进行10度旋转测试
-            print("第三次异常，进行10度旋转测试")
-            points = insert_points(points, center_point, 10)
-
-            # [修改] 原为 re_ellipse_fitting(points)
-            # 现改为 R 语言拟合
-            can_shu = fitting_call_R_conicfit(points)
-
-            can_shu = judge_value(can_shu, points, area, iterator+1, center_point, ori_points)
-
-        elif iterator==4: # 第四次异常，中值测试
-            print("第四次异常，中值测试")
-            # 注意：这里是你原始逻辑中的中值插值，通常用于最后保底
-            points = middle_insert_all(points, ori_points)
-
-            # [未修改] 用户仅要求修改 1-3 次。
-            # 如果第 4 次也想尝试 R，也可以改为 fitting_call_R_conicfit(points)
-            can_shu = re_ellipse_fitting(points)
-
-            can_shu = judge_value(can_shu, points, area, iterator+1, center_point, ori_points)
-
-        else: # 第五次异常，输出相关数据
-            export(ori_points)
-
-    return can_shu
-
 def check_validity(a, b, strict_aspect=True):
     """
     [辅助验证] 检查长短轴是否合法
@@ -555,127 +500,9 @@ def check_validity(a, b, strict_aspect=True):
 
     return True, "正常"
 
-def judge_value_0203(can_shu, points, area, iterator, center_point, ori_points):
-    """
-    校验与修正逻辑 V3.0
-    新增：扁平率校验、NaN校验
-    """
-    # --- 1. 计算拟合出的几何参数 ---
-    try:
-        a = find_a(can_shu)
-        b = find_b(can_shu)
-        fit_cx = find_x_c(can_shu)
-        fit_cy = find_y_c(can_shu)
-    except Exception:
-        # 如果 find_a/b 计算报错（例如根号下负数，说明拟合成双曲线了），直接视为异常
-        a, b, fit_cx, fit_cy = float('nan'), float('nan'), 0, 0
 
-    # --- 2. 几何参数合法性检查 (新增) ---
-    n_sides = len(ori_points)
-    is_valid, reason = check_validity(a, b, strict_aspect=(n_sides >= 5))
 
-    # --- 3. 原始数据特征 ---
-    pts_np = np.array(ori_points)
 
-    # 计算细胞物理跨度
-    min_x, max_x = np.min(pts_np[:, 0]), np.max(pts_np[:, 0])
-    min_y, max_y = np.min(pts_np[:, 1]), np.max(pts_np[:, 1])
-    max_span = max(max_x - min_x, max_y - min_y)
-    if max_span == 0: max_span = 1.0
-
-    # --- 4. 定义异常规则 ---
-    is_bad = False
-
-    # 规则A: 数值/形状非法 (NaN 或 太扁)
-    if not is_valid:
-        is_bad = True
-        # print(f"检测到异常: {reason}")
-    else:
-        # 规则B: 面积比异常
-        ell_area = a * b * math.pi
-        value_ratio = ell_area / area
-        if value_ratio < 1.0 or value_ratio > 3.0:
-            is_bad = True
-            # print(f"检测到异常: 面积比 {value_ratio:.2f}")
-
-    # --- 5. 异常处理流程 (状态机) ---
-    if is_bad:
-        points = ori_points[:] # 回退数据
-
-        if iterator == 1:
-            # 策略1: 旋转 5 度 + R语言拟合
-            points = insert_points(points, center_point, 5)
-            can_shu = fitting_call_R_conicfit(points)
-            can_shu = judge_value(can_shu, points, area, iterator+1, center_point, ori_points)
-
-        elif iterator == 2:
-            # 策略2: 旋转 8 度 + R语言拟合
-            points = insert_points(points, center_point, 8)
-            can_shu = fitting_call_R_conicfit(points)
-            can_shu = judge_value(can_shu, points, area, iterator+1, center_point, ori_points)
-
-        elif iterator == 3:
-            # 策略3: 旋转 10 度 + R语言拟合
-            points = insert_points(points, center_point, 10)
-            can_shu = fitting_call_R_conicfit(points)
-            can_shu = judge_value(can_shu, points, area, iterator+1, center_point, ori_points)
-
-        elif iterator == 4:
-            # 策略4: 中值插值 (最强约束) + 代数拟合
-            # 针对三角形特别有效
-            points = middle_insert_all(points, ori_points)
-            can_shu = re_ellipse_fitting(points)
-            can_shu = judge_value(can_shu, points, area, iterator+1, center_point, ori_points)
-
-        else:
-            # --- 最终保底: 强制使用 MBR (最小外接矩形) ---
-            print(">>> 最终保底触发: 启用 MBR 近似拟合 <<<")
-            try:
-                # 1. 计算矩形几何参数
-                geo_params = calculate_mbr_initial_guess(ori_points)
-                # 2. 转为代数参数
-                can_shu = geometric_to_algebraic(geo_params)
-                return can_shu
-            except Exception as e:
-                print(f"MBR计算失败: {e}")
-                return can_shu # 只能返回原参数
-
-    return can_shu
-
-def judge_value(can_shu, points, area, iterator, center_point, ori_points):
-    """
-    [重写 V2.0] 简化后的校验逻辑（去掉插值法）
-    只做质量检查，不再做递归尝试
-    因为所有拟合策略已经在 fitting() 函数中完成
-    """
-    try:
-        a = find_a(can_shu)
-        b = find_b(can_shu)
-        fit_cx = find_x_c(can_shu)
-        fit_cy = find_y_c(can_shu)
-    except Exception:
-        a, b, fit_cx, fit_cy = float('nan'), float('nan'), 0, 0
-
-    n_sides = len(ori_points)
-    is_valid, reason = check_validity(a, b, strict_aspect=(n_sides >= 5))
-
-    # --- 异常判断 ---
-    is_bad = False
-
-    if not is_valid:
-        is_bad = True
-    else:
-        ell_area = a * b * math.pi
-        if area > 0:
-            value_ratio = ell_area / area
-            if value_ratio < 1.0 or value_ratio > 3.0:
-                is_bad = True
-
-    # --- 异常处理：不再尝试插值法，直接返回当前结果 ---
-    # 所有拟合策略已经在 fitting() 函数中完成
-    # 这里只做质量标记，不做额外尝试
-
-    return can_shu
 
 # def judge_value(can_shu, points, area, iterator, center_point, ori_points):
 #     a = find_a(can_shu)
@@ -787,9 +614,6 @@ def fitting_1(points, center_point, area):
     if flag:
         iterator = 2
 
-    # 5. 进行结果校验与递归修正
-    parameters = judge_value(parameters, points, area, iterator, center_point, ori_points)
-
     return parameters
 def fitting_2(points, center_point, area):
     #print("开始新细胞拟合")
@@ -815,9 +639,6 @@ def fitting_2(points, center_point, area):
     iterator = 1
     if flag:
         iterator = 2
-    # 进行参数判断
-    parameters = judge_value(parameters, points, area, iterator, center_point, ori_points)
-
     return parameters
 
 def fitting_3(points, center_point, area):
@@ -896,11 +717,6 @@ def fitting_3(points, center_point, area):
 
     # --- 5. 后续常规校验 (judge_value) ---
     iterator = 1
-    if flag:
-        iterator = 2
-
-    can_shu = judge_value(can_shu, points, area, iterator, center_point, ori_points)
-
     return can_shu
 
 def export(list):
@@ -1696,8 +1512,5 @@ def fitting(points, center_point, area):
             final_can_shu = re_ellipse_fitting(points)
         except Exception:
             final_can_shu = None
-
-    if final_can_shu is not None:
-        final_can_shu = judge_value(final_can_shu, points, area, 5, center_point, ori_points)
 
     return final_can_shu
