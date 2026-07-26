@@ -934,7 +934,7 @@ class AnnealingGUI:
 
         try:
             for c in cellData.cells:
-                c.like_ellipse(1)
+                c.like_ellipse()
             cellData.list_line_of_cell()
             self._display(show_ellipse=True)
         except Exception as e:
@@ -950,7 +950,7 @@ class AnnealingGUI:
         try:
             cellData.list_line_of_cell()
             for c in cellData.cells:
-                c.like_ellipse(1)
+                c.like_ellipse()
         except Exception as e:
             messagebox.showerror(_('error'), _('error_export_prepare').format(error=str(e)), parent=self.root)
             return
@@ -1227,7 +1227,7 @@ class AnnealingGUI:
             # 椭圆
             if show_ellipse:
                 try:
-                    ellipse_data, add_points = cell.like_ellipse(1)
+                    ellipse_data, add_points = cell.like_ellipse()
                     x, y = get_ellipse(
                         ellipse_data['cp'].x, ellipse_data['cp'].y,
                         ellipse_data['a'], ellipse_data['b'],

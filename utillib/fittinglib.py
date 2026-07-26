@@ -298,34 +298,30 @@ def re_ellipse_fitting_4(points):
 #  D = c
 #  E = d
 #  F = e
-def find_y_c(can_shu):  # 根据传入参数求拟合椭圆纵坐标 计算公式是百度的
-    jz = np.asmatrix(can_shu)  # 将矩阵参数转化为数组格式 Convert matrix parameters to array format
-    # 为 a,b,c,d,e赋值 Assign a value to a, b, c, d, e
-    a = jz[0][0]
-    b = jz[1][0]
-    c = jz[2][0]
-    d = jz[3][0]
-    e = jz[4][0]
-    # 按照公式计算 Calculate according to formula
+def find_y_c(can_shu):
+    jz = np.asmatrix(can_shu)
+    a = float(jz[0][0])
+    b = float(jz[1][0])
+    c = float(jz[2][0])
+    d = float(jz[3][0])
+    e = float(jz[4][0])
     y_c_a = (2 * d) - (a * c)
     xy_c_b = (a * a) - (4 * b)
     y_c = y_c_a / xy_c_b
-    return y_c  # 返回拟合椭圆纵坐标 Returns the ordinate of the fitted ellipse
+    return y_c
 
 
-def find_x_c(can_shu):  # 根据传入参数求拟合椭圆横坐标 计算公式是百度的
-    jz = np.asmatrix(can_shu)  # 将矩阵参数转化为数组格式 Convert matrix parameters to array format
-    # 为 a,b,c,d,e赋值 Assign a value to a, b, c, d, e
-    a = jz[0][0]
-    b = jz[1][0]
-    c = jz[2][0]
-    d = jz[3][0]
-    e = jz[4][0]
-    # 按照公式计算 Calculate according to formula
+def find_x_c(can_shu):
+    jz = np.asmatrix(can_shu)
+    a = float(jz[0][0])
+    b = float(jz[1][0])
+    c = float(jz[2][0])
+    d = float(jz[3][0])
+    e = float(jz[4][0])
     x_c_a = (2 * b * c) - (a * d)
     xy_c_b = (a * a) - (4 * b)
     x_c = x_c_a / xy_c_b
-    return x_c  # 返回拟合椭圆横坐标 Returns the abscissa of the fitted ellipse
+    return x_c
 
 #-----------------------辅助函数begin-test-----------------------------------------------
 
@@ -386,54 +382,59 @@ def mirror_points_180(points, centroid):
     return points + mirrored
 
 
-def find_center_point(can_shu):  # 求拟合椭圆中心点坐标 Find the center point coordinates of fitting ellipse
+def find_center_point(can_shu):
+    """
+    获取椭圆中心点 [cx, cy]
+    注意：长度为5时直接取前两个元素，仅对几何参数 [cx, cy, a, b, theta] 正确；
+    若传入代数参数 [B, C, D, E, F] 会错误返回 [B, C]，此时应改用 find_x_c/find_y_c。
+    """
+    can_shu_flat = np.asarray(can_shu).flatten()
+    if len(can_shu_flat) == 5:
+        try:
+            return [float(can_shu_flat[0]), float(can_shu_flat[1])]
+        except (IndexError, ValueError):
+            pass
     x = find_x_c(can_shu)
     y = find_y_c(can_shu)
-    return [float(x), float(y)]  # 返回拟合椭圆中心点坐标 return the center point coordinates of fitting ellipse
+    return [float(x), float(y)]
 
 
-def find_a(can_shu):  # 求长半轴 Find the long half axis
-    jz = np.asmatrix(can_shu)  # 将矩阵参数转化为数组格式 Convert matrix parameters to array format
-    # 为 a,b,c,d,e赋值 Assign a value to a, b, c, d, e
-    a = jz[0][0]
-    b = jz[1][0]
-    c = jz[2][0]
-    d = jz[3][0]
-    e = jz[4][0]
-    # 按照公式计算 Calculate according to formula
-    fen_zi = 2 * (a * c * d - b * c * c - d * d + 4 * e * b - a * a * e)
-    fen_mu = (a * a - 4 * b) * (b - math.sqrt(a * a + (1 - b) * (1 - b)) + 1)
-    ab_e_a = math.sqrt(math.fabs(fen_zi / fen_mu))
-    return ab_e_a  # 返回拟合椭圆长半轴数据 Return fitting ellipse long half axis data
+def _algebraic_to_geometric_internal(can_shu):
+    jz = np.asmatrix(can_shu)
+    B = jz[0][0]
+    C = jz[1][0]
+    D = jz[2][0]
+    E = jz[3][0]
+    F = jz[4][0]
+    
+    discriminant = B * B - 4 * C
+    if discriminant >= 0:
+        raise ValueError("方程不是椭圆")
+    
+    fen_zi = 2 * (B * D * E - C * D * D - E * E + 4 * F * C - B * B * F)
+    fen_mu_a = (B * B - 4 * C) * (C - math.sqrt(B * B + (1 - C) * (1 - C)) + 1)
+    fen_mu_b = (B * B - 4 * C) * (C + math.sqrt(B * B + (1 - C) * (1 - C)) + 1)
+    
+    a = math.sqrt(math.fabs(fen_zi / fen_mu_a))
+    b = math.sqrt(math.fabs(fen_zi / fen_mu_b))
+    
+    theta = math.atan(B / (1 - C)) / 2
+    if C < 1:
+        theta = theta + math.pi / 2
+    
+    return {'a': a, 'b': b, 'theta': theta}
 
 
-def find_b(can_shu):  # 求短半轴 Find the short half axis
-    jz = np.asmatrix(can_shu)  # 将矩阵参数转化为数组格式 Convert matrix parameters to array format
-    # 为 a,b,c,d,e赋值 Assign a value to a, b, c, d, e
-    a = jz[0][0]
-    b = jz[1][0]
-    c = jz[2][0]
-    d = jz[3][0]
-    e = jz[4][0]
-    # 按照公式计算 Calculate according to formula
-    fen_zi = 2 * (a * c * d - b * c * c - d * d + 4 * e * b - a * a * e)
-    fen_mu = (a * a - 4 * b) * (b + math.sqrt(a * a + (1 - b) * (1 - b)) + 1)
-    ab_e_b = math.sqrt(math.fabs(fen_zi / fen_mu))
-    return ab_e_b  # 返回拟合椭圆短半轴数据 Return to fitting ellipse short axis data
+def find_a(can_shu):
+    return _algebraic_to_geometric_internal(can_shu)['a']
 
 
-#  此处代码原有bug 在调试之后 A = 1 B = b C = c
-def find_angle(can_shu):  # 求偏转角 Find deflection angle
-    jz = np.asmatrix(can_shu)  # 将矩阵参数转化为数组格式 Convert matrix parameters to array format
-    # 为 a,b,c赋值 Assign a value to a, b, c
-    b = jz[0][0]
-    c = jz[1][0]
-    # 按照公式计算 Calculate according to formula
-    qie_ta = math.atan(b / (1 - c))
-    qie_ta = qie_ta / 2
-    if c < 1:
-        qie_ta = qie_ta+math.pi/2
-    return qie_ta  # 返回拟合椭圆同水平轴偏转角数据 Return the data of the same horizontal axis deflection angle of fitting ellipse
+def find_b(can_shu):
+    return _algebraic_to_geometric_internal(can_shu)['b']
+
+
+def find_angle(can_shu):
+    return _algebraic_to_geometric_internal(can_shu)['theta']
 
 
 def judge_pp_distance(c_point, point_0):  # 判求点与点之间的距离，返回距离值  # 没用的函数
@@ -578,147 +579,6 @@ def check_validity(a, b, strict_aspect=True):
 
 #     return parameters
 
-def fitting_1(points, center_point, area):
-    #print("开始新细胞拟合")
-
-    # 1. 【非常重要】先备份原始数据，再做任何修改！
-    # 否则 judge_value 里的回退逻辑会拿到脏数据
-    ori_points = points[:]
-    length = len(points)
-    flag = False
-
-    # 2. 针对点数过少（如三角形）的情况，进行预处理
-    if length < 5:
-        # 【修改点】: 优先使用中值插值 (Middle Insert)
-        # 这会将 3 个点变成 6 个点，或 4 个点变成 8 个点
-        # 比单纯的旋转插值更能固定形状，防止拟合出无限大的椭圆
-
-        # 注意：这里传入 points[:] 作为参考列表，防止在遍历时修改列表导致死循环
-        points = middle_insert_all(points, points[:])
-
-        flag = True
-        # print(f"检测到顶点数{length} < 5，已执行中值插值，当前点数: {len(points)}")
-
-    # 3. 进行拟合操作
-    try:
-        # 优先尝试 R 语言的高精度拟合
-        parameters = fitting_call_R_conicfit(points)
-    except Exception as e:
-        # 如果 R 逻辑计算失败 (例如矩阵奇异)，回退到普通的代数拟合
-        print("LMG拟合失败，回退到代数拟合:", e)
-        parameters = re_ellipse_fitting(points)
-
-    # 4. 设置 iterator 起始值
-    # 如果前面进行了插值，说明这不是原始数据，iterator 从 2 开始
-    iterator = 1
-    if flag:
-        iterator = 2
-
-    return parameters
-def fitting_2(points, center_point, area):
-    #print("开始新细胞拟合")
-    ori_points = points[:]
-    length = len(points)
-    flag = False
-    if length < 5:
-        # 插值
-        points = insert_points(points, center_point, 5)
-        # points = insert_points(points, center_point, -5)
-        flag = True
-        #print("边数小于5，已进行插值")
-    # 进行拟合操作，获取参数
-    try:
-        parameters = fitting_call_R_conicfit(points)
-        # parameters =fitting_with_MBR_logic(points)
-        # 尝试使用高精度的 R 逻辑拟合
-        #parameters = fitting_with_R_logic(points)
-    except Exception as e:
-        # 如果 R 逻辑计算失败 (例如矩阵奇异)，回退到普通的代数拟合
-        print("LMG拟合失败，回退到代数拟合:", e)
-        parameters = re_ellipse_fitting(points)
-    iterator = 1
-    if flag:
-        iterator = 2
-    return parameters
-
-def fitting_3(points, center_point, area):
-    """
-    修改后的拟合逻辑:
-    1. 默认先进行代数拟合。
-    2. 如果检测到过拟合(面积比>3) 或 原始形状为三角形，
-       则调用 R 语言 LMG 算法进行二次拟合。
-    3. 对比代数拟合和 R 拟合的结果，保留面积更小(更紧致)的椭圆。
-    """
-    ori_points = points[:]
-    length = len(points)
-    flag = False
-
-    # --- 1. 预处理：少边形插值 ---
-    # 如果点数过少(如三角形)，先插值增加约束点
-    if length < 5:
-        points = insert_points(points, center_point, 5)
-        flag = True
-
-    # --- 2. 第一轮：基准代数拟合 ---
-    try:
-        can_shu = re_ellipse_fitting(points)
-
-        # 计算代数拟合的面积
-        a = find_a(can_shu)
-        b = find_b(can_shu)
-        # 如果出现无效值(NaN/Inf)，设面积为无限大
-        if math.isnan(a) or math.isnan(b) or math.isinf(a) or math.isinf(b):
-            area_alg = float('inf')
-        else:
-            area_alg = math.pi * a * b
-
-    except Exception:
-        can_shu = None
-        area_alg = float('inf')
-
-    # 计算面积比值 (拟合面积 / 细胞真实面积)
-    if area > 0:
-        ratio = area_alg / area
-    else:
-        ratio = float('inf')
-
-    # --- 3. 决策逻辑：是否触发 R 语言优化 ---
-    # 触发条件：(1) 比值 > 3  OR  (2) 原始形状是三角形 (length == 3)
-    is_triangle = (length == 3)
-
-    if ratio > 3 or is_triangle:
-        # print(f"触发优化逻辑: 三角形={is_triangle}, 面积比={ratio:.2f}")
-        try:
-            # 调用 R 语言拟合
-            can_shu_R = fitting_call_R_conicfit(points)
-
-            # 计算 R 拟合的面积
-            a_R = find_a(can_shu_R)
-            b_R = find_b(can_shu_R)
-
-            if math.isnan(a_R) or math.isnan(b_R) or math.isinf(a_R) or math.isinf(b_R):
-                area_R = float('inf')
-            else:
-                area_R = math.pi * a_R * b_R
-
-            # --- 4. 择优保留 ---
-            # 只有当 R 拟合结果有效，且面积确实比代数拟合更小时，才采用 R 的结果
-            if area_R > area_alg:
-                # print(f"R语言优化生效: 面积从 {area_alg:.1f} 优化为 {area_R:.1f}")
-                can_shu = can_shu_R
-            # else:
-                # print("R语言结果未更优，保持原结果")
-
-        except Exception as e:
-            print(f"R语言调用失败或计算异常: {e}，保持代数拟合结果")
-            if can_shu is None:
-                # 如果代数拟合之前也失败了，这里做最后的保底尝试
-                can_shu = re_ellipse_fitting(points)
-
-    # --- 5. 后续常规校验 (judge_value) ---
-    iterator = 1
-    return can_shu
-
 def export(list):
     print("经不同方式的两次插值后，该细胞仍不符合条件，其多边形坐标为：")
     for p in list:
@@ -731,7 +591,10 @@ def export(list):
 def calculate_ellipse_residuals(params, x, y):
     """
     计算点到椭圆方程的残差，用于 fit.ellipseLMG (R代码中的核心逻辑)
-    params: [cx, cy, a, b, theta]
+    :param params: 几何参数 [cx, cy, a, b, theta]
+    :param x: 点集 x 坐标数组
+    :param y: 点集 y 坐标数组
+    :return: 残差数组 (x'/a)^2 + (y'/b)^2 - 1
     """
     cx, cy, a, b, theta = params
     cos_t = math.cos(theta)
@@ -844,6 +707,20 @@ def ellipse_fitting_geometric_LMG_version2(points, initial_params=None):
         return initial_params
 
 
+def algebraic_to_geometric(can_shu):
+    """
+    将代数参数 can_shu 转换为几何参数数组
+    返回: [cx, cy, a, b, theta]（与R返回格式一致）
+    """
+    return np.array([
+        find_x_c(can_shu),
+        find_y_c(can_shu),
+        find_a(can_shu),
+        find_b(can_shu),
+        find_angle(can_shu)
+    ])
+
+
 def geometric_to_algebraic(geo_params):
     """
     将几何参数 [cx, cy, a, b, theta] 转换为代数参数 [B, C, D, E, F] (假设 A=1)
@@ -872,52 +749,59 @@ def geometric_to_algebraic(geo_params):
     return np.array([B/A, C/A, D/A, E/A, F/A]).reshape(-1, 1)
 
 
-def calculate_teacher_pargini(points):
+def calculate_teacher_pargini(points, mbr_points=None):
     """
-    [新增/修改]  ParGini 初始值计算逻辑
-    参数顺序：
-    1. 多边形重心 X (并非矩形中心)
-    2. 多边形重心 Y
-    3. 矩形长 * 0.5 (半长轴)
-    4. 矩形宽 * 0.5 (半短轴)
-    5. 矩形长轴与 X 轴夹角
+    ParGini 初始值计算逻辑
+    参数：
+        points: 用于计算重心的点集
+        mbr_points: 用于计算MBR的点集（默认等于points）
+    返回：几何参数 [cx, cy, a, b, theta]
+        cx: 重心 X
+        cy: 重心 Y
+        a: 矩形长 * 0.5 (半长轴)
+        b: 矩形宽 * 0.5 (半短轴)
+        theta: 矩形长轴与 X 轴夹角
     """
     pts_np = np.array(points)
 
-    # --- A. 计算多边形重心 (所有顶点的均值) ---
     poly_centroid = np.mean(pts_np, axis=0)
     center_x = poly_centroid[0]
     center_y = poly_centroid[1]
 
-    # --- B. 计算最小外接矩形 (MBR) ---
-    # 获取 MBR 顶点
-    mbr_points = get_minimum_bounding_rectangle(points)
-    mbr = np.array(mbr_points)
+    if mbr_points is None:
+        mbr_points = points
 
-    # 取前三个点计算边向量 (p0->p1, p1->p2)
-    p0, p1, p2 = mbr[0], mbr[1], mbr[2]
-    vec1 = p1 - p0
-    vec2 = p2 - p1
-    len1 = np.linalg.norm(vec1)
-    len2 = np.linalg.norm(vec2)
+    try:
+        mbr_result = get_minimum_bounding_rectangle(mbr_points)
+        mbr = np.array(mbr_result)
 
-    # --- C. 区分长宽与角度 ---
-    if len1 >= len2:
-        rect_len = len1
-        rect_width = len2
-        # 计算长边向量的角度 (atan2 返回弧度)
-        angle = math.atan2(vec1[1], vec1[0])
-    else:
-        rect_len = len2
-        rect_width = len1
-        angle = math.atan2(vec2[1], vec2[0])
+        p0, p1, p2 = mbr[0], mbr[1], mbr[2]
+        vec1 = p1 - p0
+        vec2 = p2 - p1
+        len1 = np.linalg.norm(vec1)
+        len2 = np.linalg.norm(vec2)
 
-    # --- D. 组装参数 ---
-    # LMG 算法需要的 a, b 为半轴长，所以乘 0.5
-    init_a = rect_len * 0.5
-    init_b = rect_width * 0.5
+        if len1 >= len2:
+            rect_len = len1
+            rect_width = len2
+            angle = math.atan2(vec1[1], vec1[0])
+        else:
+            rect_len = len2
+            rect_width = len1
+            angle = math.atan2(vec2[1], vec2[0])
 
-    # 返回列表 [Cx, Cy, a, b, theta]
+        init_a = rect_len * 0.5
+        init_b = rect_width * 0.5
+
+    except Exception as e:
+        print(f"MBR计算失败: {e}。使用包围盒替代。")
+        pts_mbr = np.array(mbr_points)
+        min_x, max_x = np.min(pts_mbr[:, 0]), np.max(pts_mbr[:, 0])
+        min_y, max_y = np.min(pts_mbr[:, 1]), np.max(pts_mbr[:, 1])
+        init_a = (max_x - min_x) * 0.5
+        init_b = (max_y - min_y) * 0.5
+        angle = 0.0
+
     return [center_x, center_y, init_a, init_b, angle]
 
 def check_ls_quality_0203(can_shu, points, poly_area):
@@ -929,16 +813,14 @@ def check_ls_quality_0203(can_shu, points, poly_area):
         return False
 
     try:
-        # 1. 获取椭圆参数
+        # 获取椭圆半轴
         a = find_a(can_shu)
         b = find_b(can_shu)
-        cx, cy = find_center_point(can_shu)
-        theta = find_angle(can_shu) # 需要用到角度来进行坐标变换验证重心
 
         if math.isnan(a) or math.isnan(b) or a <= 0 or b <= 0:
             return False
 
-        # --- 规则 1：面积比校验 ---
+        # --- 面积比校验 ---
         ellipse_area = math.pi * a * b
         if poly_area > 0:
             ratio = ellipse_area / poly_area
@@ -954,28 +836,43 @@ def check_ls_quality_0203(can_shu, points, poly_area):
 
 def check_ls_quality(can_shu, points, poly_area):
     """
-    [修改] 按照新规则判断拟合质量
+    判断拟合质量（当前 fitting() 流程仅传入几何参数）
+    参数:
+        can_shu: 几何参数 [cx, cy, a, b, theta]（长度为5时，若第5项落在 [-π,π] 则按几何参数解析，
+                 否则回退到 find_a/find_b 按代数参数解析）
+        points: 顶点集合
+        poly_area: 多边形面积
     返回: True (合格), False (异常)
     """
     if can_shu is None:
         return False
 
     try:
-        # 1. 获取椭圆参数
-        a = find_a(can_shu)
-        b = find_b(can_shu)
+        can_shu_flat = np.asarray(can_shu).flatten()
+        
+        if len(can_shu_flat) == 5:
+            try:
+                theta_val = float(can_shu_flat[4])
+                if -math.pi <= theta_val <= math.pi:
+                    a = float(can_shu_flat[2])
+                    b = float(can_shu_flat[3])
+                else:
+                    a = find_a(can_shu)
+                    b = find_b(can_shu)
+            except (IndexError, ValueError):
+                a = find_a(can_shu)
+                b = find_b(can_shu)
+        else:
+            a = find_a(can_shu)
+            b = find_b(can_shu)
 
-        # 基础数值检查
         if math.isnan(a) or math.isnan(b) or a <= 0 or b <= 0:
             return False
 
-        # --- 核心规则更改：面积比校验 ---
-        # 老师要求：面积比不在 1~3 范围内时判断为异常
         ellipse_area = math.pi * a * b
         if poly_area > 0:
             ratio = ellipse_area / poly_area
             if ratio < 1.0 or ratio > 3.0:
-                # print(f"异常判定：面积比 {ratio:.2f} 不在 1~3 范围内")
                 return False
 
         return True
@@ -991,43 +888,38 @@ def check_ls_quality_v5(can_shu, points, poly_area):
     """
     return check_ls_quality(can_shu, points, poly_area)
 
-def fitting_call_R_conicfit(points, mbr_points=None):
+def fitting_call_R_conicfit(points, mbr_points=None, fit_points=None):
     """
-    [修改后] 调用 R 语言 fit.ellipseLMG，使用老师指定的 ParGini 初值
-    :param points: 用于拟合的点集（实际拟合用的点）
+    调用 R 语言 fit.ellipseLMG，使用老师指定的 ParGini 初值
+    :param points: 用于计算重心的点集
     :param mbr_points: 用于计算MBR初值的点集（默认等于points）
+    :param fit_points: 用于实际拟合的点集（默认等于points）
+    :return: 几何参数数组 [cx, cy, a, b, theta]，R失败时返回 None（不回退）
     """
     try:
-        pts_np = np.array(points)
+        actual_fit_points = fit_points if fit_points is not None else points
+        pts_np = np.array(actual_fit_points)
 
         if mbr_points is None:
             mbr_points = points
 
-        # --- 关键修改：使用指定的点集计算 ParGini 初值 ---
-        pargini_list = calculate_teacher_pargini(mbr_points)
+        pargini_list = calculate_teacher_pargini(points, mbr_points)
 
-        # 构造 R 对象
         pargini_vec = robjects.FloatVector(pargini_list)
         par_gini_r = robjects.r.matrix(pargini_vec, ncol=1)
 
-        # 导入包
         conicfit = importr('conicfit')
 
-        # 使用局部转换器调用 R
         with conversion.localconverter(robjects.default_converter + numpy2ri.converter):
-            # 调用 LMG 算法，tol 设为 1e-5 保证精度
             res_r = conicfit.fit_ellipseLMG(pts_np, par_gini_r, 1e-5)
-
-            # 解析结果
             geo_params_r = res_r[0]
             geo_params = np.array(geo_params_r).flatten()
 
-        # 转换回代数参数 [A,B,C,D,E,F] 格式
-        return geometric_to_algebraic(geo_params)
+        return geo_params
 
     except Exception as e:
-        print(f"R语言接口调用失败: {e}。回退到普通拟合。")
-        return re_ellipse_fitting(points)
+        print(f"R语言接口调用失败: {e}")
+        return None
 
 def calculate_mbr_initial_guess(points):
     """
@@ -1077,30 +969,6 @@ def calculate_mbr_initial_guess(points):
 
     return [cx, cy, init_a, init_b, angle]
 
-
-def fitting_with_MBR_logic(points):
-    """
-    [新增函数] 替代原有的 fitting_with_R_logic
-    流程：
-    1. 使用 MBR (最小外接矩形) 获得稳健初值
-    2. 将初值传入 LMG (Levenberg-Marquardt) 进行单次高精度拟合
-    """
-    try:
-        # 1. 计算基于矩形的几何初值 [cx, cy, a, b, theta]
-        initial_guess = calculate_mbr_initial_guess(points)
-
-        # 2. 使用该初值进行 LMG 拟合
-        # 直接调用你现有的 ellipse_fitting_geometric_LMG_version2
-        # 因为初值已经很靠谱了，不需要再做插值(8点)步骤，直接对原始点集拟合即可
-        geo_params_final = ellipse_fitting_geometric_LMG_version2(points, initial_params=initial_guess)
-
-        # 3. 转换回代数参数返回
-        return geometric_to_algebraic(geo_params_final)
-
-    except Exception as e:
-        print(f"MBR拟合阶段出错: {e}, 回退到普通代数拟合")
-        # 如果矩形计算出错（极少见），回退到旧方法
-        return re_ellipse_fitting(points)
 
 # def fitting_with_R_logic(points):
 #     """
@@ -1319,186 +1187,191 @@ def safe_get_area(can_shu):
 
 def fitting(points, center_point, area):
     """
-    [重写 V9.0] 新的三阶段拟合策略
+    [重写 V10.0] 新的三阶段拟合策略，统一返回几何参数
     策略：
     1. n >= 5：
-       - round1: 代数法，基于真实点（n个）
-       - round2: 代数法，基于真实点+镜像点（2n个）
-       - round3: R LMG，基于真实点+镜像点（2n个），用2n点的MBR做初值
+       - round1: 代数法，基于真实点（n个）→ 转为几何参数
+       - round2: 代数法，基于真实点+镜像点（2n个）→ 转为几何参数
+       - round3: R LMG，基于真实点+镜像点（2n个）→ 直接返回几何参数
     2. n < 5：
-       - round1: R LMG，基于真实点（n个）
-       - round2: 代数法，基于真实点+镜像点（2n个）
-       - round3: R LMG，基于真实点+镜像点（2n个），用2n点的MBR做初值
+       - round1: R LMG，基于真实点（n个）→ 直接返回几何参数
+       - round2: 代数法，基于真实点+镜像点（2n个）→ 转为几何参数
+       - round3: R LMG，基于真实点+镜像点（2n个）→ 直接返回几何参数
     3. 面积比合格范围：1.0 ~ 3.0
-    4. 不使用MBR保底，不使用插值法
+    4. 保底：Round 1/2/3 都不合格时，使用真实点重心(cx,cy) + 真实点&镜像点(2n)的MBR(半长轴/半短轴/倾角)作为椭圆
+    5. 返回值：统一为几何参数 [cx, cy, a, b, theta]
     """
-    ori_points = points[:]
     n_sides = len(points)
-    final_can_shu = None
-
-    mirrored_points = mirror_points_180(points[:], center_point)
+    final_geo = None
+    mirrored_points = None
+    combined_points = None
 
     if n_sides >= 5:
-        # --- n >= 5：代数法真实点 → 代数法2n点 → R LMG 2n点 ---
-        
-        # round1: 代数法，基于真实点（n个）
-        can_shu_round1 = None
+        geo_round1 = None
         try:
-            can_shu_round1 = re_ellipse_fitting(points)
+            can_shu = re_ellipse_fitting(points)
+            geo_round1 = algebraic_to_geometric(can_shu)
         except Exception as e:
             print(f"round1 代数拟合失败: {e}")
         
-        if can_shu_round1 is not None:
-            is_round1_ok = check_ls_quality_v5(can_shu_round1, points, area)
+        if geo_round1 is not None:
+            is_round1_ok = check_ls_quality_v5(geo_round1, points, area)
             if is_round1_ok:
-                final_can_shu = can_shu_round1
+                final_geo = geo_round1
             else:
-                # round2: 代数法，基于真实点+镜像点（2n个）
-                can_shu_round2 = None
+                mirrored_points = mirror_points_180(points[:], center_point)
+                combined_points = points + mirrored_points
+                geo_round2 = None
                 try:
-                    can_shu_round2 = re_ellipse_fitting(mirrored_points)
-                except Exception as e:
-                    print(f"round2 代数拟合失败: {e}")
+                    can_shu = re_ellipse_fitting(combined_points)
+                    geo_round2 = algebraic_to_geometric(can_shu)
+                except Exception:
+                    pass
                 
-                if can_shu_round2 is not None:
-                    is_round2_ok = check_ls_quality_v5(can_shu_round2, points, area)
+                if geo_round2 is not None:
+                    is_round2_ok = check_ls_quality_v5(geo_round2, points, area)
                     if is_round2_ok:
-                        final_can_shu = can_shu_round2
+                        final_geo = geo_round2
                     else:
-                        # round3: R LMG，基于真实点+镜像点（2n个），用2n点的MBR做初值
-                        can_shu_round3 = None
                         try:
-                            can_shu_round3 = fitting_call_R_conicfit(mirrored_points, mbr_points=mirrored_points)
-                        except Exception as e:
-                            print(f"round3 R LMG拟合失败: {e}")
+                            geo_round3 = fitting_call_R_conicfit(points, combined_points, combined_points)
+                        except Exception:
+                            geo_round3 = None
                         
-                        if can_shu_round3 is not None:
-                            is_round3_ok = check_ls_quality_v5(can_shu_round3, points, area)
+                        if geo_round3 is not None:
+                            is_round3_ok = check_ls_quality_v5(geo_round3, points, area)
                             if is_round3_ok:
-                                final_can_shu = can_shu_round3
-                            else:
-                                final_can_shu = can_shu_round2
-                        else:
-                            final_can_shu = can_shu_round2
+                                final_geo = geo_round3
                 else:
-                    # round2失败，尝试round3
                     try:
-                        can_shu_round3 = fitting_call_R_conicfit(mirrored_points, mbr_points=mirrored_points)
-                        is_round3_ok = check_ls_quality_v5(can_shu_round3, points, area)
-                        if is_round3_ok:
-                            final_can_shu = can_shu_round3
-                        else:
-                            final_can_shu = can_shu_round1
+                        geo_round3 = fitting_call_R_conicfit(points, combined_points, combined_points)
+                        if geo_round3 is not None:
+                            is_round3_ok = check_ls_quality_v5(geo_round3, points, area)
+                            if is_round3_ok:
+                                final_geo = geo_round3
                     except Exception:
-                        final_can_shu = can_shu_round1
+                        pass
         else:
-            # round1失败，尝试round2
+            mirrored_points = mirror_points_180(points[:], center_point)
+            combined_points = points + mirrored_points
+            geo_round2 = None
             try:
-                can_shu_round2 = re_ellipse_fitting(mirrored_points)
-                is_round2_ok = check_ls_quality_v5(can_shu_round2, points, area)
+                can_shu = re_ellipse_fitting(combined_points)
+                geo_round2 = algebraic_to_geometric(can_shu)
+            except Exception:
+                pass
+            
+            if geo_round2 is not None:
+                is_round2_ok = check_ls_quality_v5(geo_round2, points, area)
                 if is_round2_ok:
-                    final_can_shu = can_shu_round2
+                    final_geo = geo_round2
                 else:
                     try:
-                        can_shu_round3 = fitting_call_R_conicfit(mirrored_points, mbr_points=mirrored_points)
-                        is_round3_ok = check_ls_quality_v5(can_shu_round3, points, area)
-                        if is_round3_ok:
-                            final_can_shu = can_shu_round3
-                        else:
-                            final_can_shu = can_shu_round2
+                        geo_round3 = fitting_call_R_conicfit(points, combined_points, combined_points)
+                        if geo_round3 is not None:
+                            is_round3_ok = check_ls_quality_v5(geo_round3, points, area)
+                            if is_round3_ok:
+                                final_geo = geo_round3
                     except Exception:
-                        final_can_shu = can_shu_round2
-            except Exception:
+                        pass
+            else:
                 try:
-                    final_can_shu = fitting_call_R_conicfit(mirrored_points, mbr_points=mirrored_points)
+                    geo_round3 = fitting_call_R_conicfit(points, combined_points, combined_points)
+                    if geo_round3 is not None:
+                        is_round3_ok = check_ls_quality_v5(geo_round3, points, area)
+                        if is_round3_ok:
+                            final_geo = geo_round3
                 except Exception:
                     pass
 
     else:
-        # --- n < 5：R LMG真实点 → 代数法2n点 → R LMG 2n点 ---
-        
-        # round1: R LMG，基于真实点（n个）
-        can_shu_round1 = None
+        geo_round1 = None
         try:
-            can_shu_round1 = fitting_call_R_conicfit(points)
+            geo_round1 = fitting_call_R_conicfit(points)
         except Exception as e:
             print(f"round1 R拟合失败: {e}")
+        
+        if geo_round1 is not None:
+            is_round1_ok = check_ls_quality_v5(geo_round1, points, area)
+            if is_round1_ok:
+                final_geo = geo_round1
+            else:
+                mirrored_points = mirror_points_180(points[:], center_point)
+                combined_points = points + mirrored_points
+                geo_round2 = None
+                try:
+                    can_shu = re_ellipse_fitting(combined_points)
+                    geo_round2 = algebraic_to_geometric(can_shu)
+                except Exception:
+                    pass
+                
+                if geo_round2 is not None:
+                    is_round2_ok = check_ls_quality_v5(geo_round2, points, area)
+                    if is_round2_ok:
+                        final_geo = geo_round2
+                    else:
+                        try:
+                            geo_round3 = fitting_call_R_conicfit(points, combined_points, combined_points)
+                        except Exception:
+                            geo_round3 = None
+                        
+                        if geo_round3 is not None:
+                            is_round3_ok = check_ls_quality_v5(geo_round3, points, area)
+                            if is_round3_ok:
+                                final_geo = geo_round3
+                else:
+                    try:
+                        geo_round3 = fitting_call_R_conicfit(points, combined_points, combined_points)
+                        if geo_round3 is not None:
+                            is_round3_ok = check_ls_quality_v5(geo_round3, points, area)
+                            if is_round3_ok:
+                                final_geo = geo_round3
+                    except Exception:
+                        pass
+        else:
+            mirrored_points = mirror_points_180(points[:], center_point)
+            combined_points = points + mirrored_points
+            geo_round2 = None
             try:
-                can_shu_round1 = re_ellipse_fitting(points)
+                can_shu = re_ellipse_fitting(combined_points)
+                geo_round2 = algebraic_to_geometric(can_shu)
             except Exception:
                 pass
-        
-        if can_shu_round1 is not None:
-            is_round1_ok = check_ls_quality_v5(can_shu_round1, points, area)
-            if is_round1_ok:
-                final_can_shu = can_shu_round1
-            else:
-                # round2: 代数法，基于真实点+镜像点（2n个）
-                can_shu_round2 = None
-                try:
-                    can_shu_round2 = re_ellipse_fitting(mirrored_points)
-                except Exception as e:
-                    print(f"round2 代数拟合失败: {e}")
-                
-                if can_shu_round2 is not None:
-                    is_round2_ok = check_ls_quality_v5(can_shu_round2, points, area)
-                    if is_round2_ok:
-                        final_can_shu = can_shu_round2
-                    else:
-                        # round3: R LMG，基于真实点+镜像点（2n个），用2n点的MBR做初值
-                        can_shu_round3 = None
-                        try:
-                            can_shu_round3 = fitting_call_R_conicfit(mirrored_points, mbr_points=mirrored_points)
-                        except Exception as e:
-                            print(f"round3 R LMG拟合失败: {e}")
-                        
-                        if can_shu_round3 is not None:
-                            is_round3_ok = check_ls_quality_v5(can_shu_round3, points, area)
-                            if is_round3_ok:
-                                final_can_shu = can_shu_round3
-                            else:
-                                final_can_shu = can_shu_round2
-                        else:
-                            final_can_shu = can_shu_round2
-                else:
-                    # round2失败，尝试round3
-                    try:
-                        can_shu_round3 = fitting_call_R_conicfit(mirrored_points, mbr_points=mirrored_points)
-                        is_round3_ok = check_ls_quality_v5(can_shu_round3, points, area)
-                        if is_round3_ok:
-                            final_can_shu = can_shu_round3
-                        else:
-                            final_can_shu = can_shu_round1
-                    except Exception:
-                        final_can_shu = can_shu_round1
-        else:
-            # round1失败，尝试round2
-            try:
-                can_shu_round2 = re_ellipse_fitting(mirrored_points)
-                is_round2_ok = check_ls_quality_v5(can_shu_round2, points, area)
+            
+            if geo_round2 is not None:
+                is_round2_ok = check_ls_quality_v5(geo_round2, points, area)
                 if is_round2_ok:
-                    final_can_shu = can_shu_round2
+                    final_geo = geo_round2
                 else:
                     try:
-                        can_shu_round3 = fitting_call_R_conicfit(mirrored_points, mbr_points=mirrored_points)
-                        is_round3_ok = check_ls_quality_v5(can_shu_round3, points, area)
-                        if is_round3_ok:
-                            final_can_shu = can_shu_round3
-                        else:
-                            final_can_shu = can_shu_round2
+                        geo_round3 = fitting_call_R_conicfit(points, combined_points, combined_points)
+                        if geo_round3 is not None:
+                            is_round3_ok = check_ls_quality_v5(geo_round3, points, area)
+                            if is_round3_ok:
+                                final_geo = geo_round3
                     except Exception:
-                        final_can_shu = can_shu_round2
-            except Exception:
+                        pass
+            else:
                 try:
-                    final_can_shu = fitting_call_R_conicfit(mirrored_points, mbr_points=mirrored_points)
+                    geo_round3 = fitting_call_R_conicfit(points, combined_points, combined_points)
+                    if geo_round3 is not None:
+                        is_round3_ok = check_ls_quality_v5(geo_round3, points, area)
+                        if is_round3_ok:
+                            final_geo = geo_round3
                 except Exception:
                     pass
 
-    # 最终保底：只用代数法，不使用MBR
-    if final_can_shu is None or safe_get_area(final_can_shu) == float('inf'):
-        try:
-            final_can_shu = re_ellipse_fitting(points)
-        except Exception:
-            final_can_shu = None
-
-    return final_can_shu
+    if final_geo is None:
+        if mirrored_points is None:
+            mirrored_points = mirror_points_180(points[:], center_point)
+        combined_points = points + mirrored_points
+        mbr_params = calculate_teacher_pargini(points, combined_points)
+        final_geo = np.array([
+            mbr_params[0],
+            mbr_params[1],
+            mbr_params[2],
+            mbr_params[3],
+            mbr_params[4]
+        ])
+    
+    return final_geo
