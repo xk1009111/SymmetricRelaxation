@@ -989,39 +989,34 @@ def fitting_call_R_conicfit(points, init_points=None):
         points: 真实顶点集合（用于拟合）
         init_points: 可选，用于计算MBR的点集合（如镜像点）。如果为None，使用points计算MBR
     返回：
-        几何参数数组 [cx, cy, a, b, theta]，或代数参数数组（失败时回退）
+        几何参数数组 [cx, cy, a, b, theta]，R失败时返回 None（不回退）
     """
     try:
         pts_np = np.array(points)
-        
+
         # 使用 init_points（如镜像点）计算MBR，真实顶点计算重心
         pargini_list = calculate_teacher_pargini(points, init_points)
-        
+
         # 构造 R 对象
         pargini_vec = robjects.FloatVector(pargini_list)
         par_gini_r = robjects.r.matrix(pargini_vec, ncol=1)
-        
+
         # 导入包
         conicfit = importr('conicfit')
-        
+
         # 使用局部转换器调用 R
         with conversion.localconverter(robjects.default_converter + numpy2ri.converter):
             res_r = conicfit.fit_ellipseLMG(pts_np, par_gini_r, 1e-5)
-            
+
             geo_params_r = res_r[0]
             geo_params = np.array(geo_params_r).flatten()
-        
+
         # 直接返回几何参数，不再转换为代数参数
         return geo_params
 
     except Exception as e:
-        print(f"R语言接口调用失败: {e}。回退到普通拟合。")
-        # 失败时回退到代数拟合，然后转换为几何参数返回
-        try:
-            can_shu = re_ellipse_fitting(points)
-            return algebraic_to_geometric(can_shu)
-        except Exception:
-            return re_ellipse_fitting(points)
+        print(f"R语言接口调用失败: {e}")
+        return None
 
 def calculate_mbr_initial_guess(points):
     """
@@ -1313,7 +1308,7 @@ def safe_get_area(can_shu):
 
 def fitting(points, center_point, area):
     """
-    [重写 V12.0] 新的三阶段拟合策略，返回几何参数
+    [重写 V13.0] 三阶段拟合策略，返回几何参数
     策略：
     1. n >= 5：
        - round1: 代数法，基于真实点（n个）
@@ -1324,8 +1319,9 @@ def fitting(points, center_point, area):
        - round2: 代数法，基于真实点+镜像点（2n个）
        - round3: R LMG，基于真实点+镜像点（2n个），用2n点的MBR做初值
     3. 面积比合格范围：1.0 ~ 3.0
-    4. 不使用MBR保底，不使用插值法
-    5. 返回值：统一为几何参数 [cx, cy, a, b, theta]
+    4. 每轮失败直接进下一轮，不回退
+    5. 三轮全失败：用真实点重心(cx,cy) + 2n点MBR(半长轴/半短轴/倾角)作为椭圆保底
+    6. 返回值：统一为几何参数 [cx, cy, a, b, theta]
     """
     n_sides = len(points)
     final_geo = None
@@ -1334,125 +1330,84 @@ def fitting(points, center_point, area):
 
     if n_sides >= 5:
         # --- n >= 5：代数法真实点 → 代数法2n点 → R LMG 2n点(2n初值) ---
-        
-        geo_round1 = None
+
+        # Round 1: 代数法，真实点
         try:
             can_shu = re_ellipse_fitting(points)
             geo_round1 = algebraic_to_geometric(can_shu)
         except Exception as e:
             print(f"round1 代数拟合失败: {e}")
-        
-        if geo_round1 is not None:
-            is_round1_ok = check_ls_quality_v5(geo_round1, points, area)
-            if is_round1_ok:
-                final_geo = geo_round1
-            else:
-                geo_round2 = None
-                try:
-                    can_shu = re_ellipse_fitting(mirrored_points)
-                    geo_round2 = algebraic_to_geometric(can_shu)
-                except Exception as e:
-                    print(f"round2 代数拟合失败: {e}")
-                
-                if geo_round2 is not None:
-                    is_round2_ok = check_ls_quality_v5(geo_round2, points, area)
-                    if is_round2_ok:
-                        final_geo = geo_round2
-                    else:
-                        try:
-                            geo_round3 = fitting_call_R_conicfit(mirrored_points, init_points=mirrored_points)
-                        except Exception as e:
-                            print(f"round3 R LMG拟合失败: {e}")
-                            geo_round3 = geo_round2
-                        
-                        if geo_round3 is not None:
-                            is_round3_ok = check_ls_quality_v5(geo_round3, points, area)
-                            if is_round3_ok:
-                                final_geo = geo_round3
-                            else:
-                                final_geo = geo_round2
-                        else:
-                            final_geo = geo_round2
-                else:
-                    try:
-                        final_geo = fitting_call_R_conicfit(mirrored_points, init_points=mirrored_points)
-                    except Exception:
-                        final_geo = geo_round1
+            geo_round1 = None
+
+        if geo_round1 is not None and check_ls_quality_v5(geo_round1, points, area):
+            final_geo = geo_round1
         else:
+            # Round 2: 代数法，2n点
             try:
                 can_shu = re_ellipse_fitting(mirrored_points)
-                final_geo = algebraic_to_geometric(can_shu)
-            except Exception:
+                geo_round2 = algebraic_to_geometric(can_shu)
+            except Exception as e:
+                print(f"round2 代数拟合失败: {e}")
+                geo_round2 = None
+
+            if geo_round2 is not None and check_ls_quality_v5(geo_round2, points, area):
+                final_geo = geo_round2
+            else:
+                # Round 3: R LMG，2n点，2n点MBR初值
                 try:
-                    final_geo = fitting_call_R_conicfit(mirrored_points, init_points=mirrored_points)
-                except Exception:
-                    pass
+                    geo_round3 = fitting_call_R_conicfit(mirrored_points, init_points=mirrored_points)
+                except Exception as e:
+                    print(f"round3 R LMG拟合失败: {e}")
+                    geo_round3 = None
+
+                if geo_round3 is not None and check_ls_quality_v5(geo_round3, points, area):
+                    final_geo = geo_round3
+                # Round 3 失败或不合格，直接进保底
 
     else:
         # --- n < 5：R LMG真实点 → 代数法2n点 → R LMG 2n点(2n初值) ---
-        
-        geo_round1 = None
+
+        # Round 1: R LMG，真实点，真实点MBR初值
         try:
             geo_round1 = fitting_call_R_conicfit(points)
         except Exception as e:
-            print(f"round1 R拟合失败: {e}")
-            try:
-                can_shu = re_ellipse_fitting(points)
-                geo_round1 = algebraic_to_geometric(can_shu)
-            except Exception:
-                pass
-        
-        if geo_round1 is not None:
-            is_round1_ok = check_ls_quality_v5(geo_round1, points, area)
-            if is_round1_ok:
-                final_geo = geo_round1
-            else:
-                geo_round2 = None
-                try:
-                    can_shu = re_ellipse_fitting(mirrored_points)
-                    geo_round2 = algebraic_to_geometric(can_shu)
-                except Exception as e:
-                    print(f"round2 代数拟合失败: {e}")
-                
-                if geo_round2 is not None:
-                    is_round2_ok = check_ls_quality_v5(geo_round2, points, area)
-                    if is_round2_ok:
-                        final_geo = geo_round2
-                    else:
-                        try:
-                            geo_round3 = fitting_call_R_conicfit(mirrored_points, init_points=mirrored_points)
-                        except Exception as e:
-                            print(f"round3 R LMG拟合失败: {e}")
-                            geo_round3 = geo_round2
-                        
-                        if geo_round3 is not None:
-                            is_round3_ok = check_ls_quality_v5(geo_round3, points, area)
-                            if is_round3_ok:
-                                final_geo = geo_round3
-                            else:
-                                final_geo = geo_round2
-                        else:
-                            final_geo = geo_round2
-                else:
-                    try:
-                        final_geo = fitting_call_R_conicfit(mirrored_points, init_points=mirrored_points)
-                    except Exception:
-                        final_geo = geo_round1
+            print(f"round1 R LMG拟合失败: {e}")
+            geo_round1 = None
+
+        if geo_round1 is not None and check_ls_quality_v5(geo_round1, points, area):
+            final_geo = geo_round1
         else:
+            # Round 2: 代数法，2n点
             try:
                 can_shu = re_ellipse_fitting(mirrored_points)
-                final_geo = algebraic_to_geometric(can_shu)
-            except Exception:
-                try:
-                    final_geo = fitting_call_R_conicfit(mirrored_points, init_points=mirrored_points)
-                except Exception:
-                    pass
+                geo_round2 = algebraic_to_geometric(can_shu)
+            except Exception as e:
+                print(f"round2 代数拟合失败: {e}")
+                geo_round2 = None
 
+            if geo_round2 is not None and check_ls_quality_v5(geo_round2, points, area):
+                final_geo = geo_round2
+            else:
+                # Round 3: R LMG，2n点，2n点MBR初值
+                try:
+                    geo_round3 = fitting_call_R_conicfit(mirrored_points, init_points=mirrored_points)
+                except Exception as e:
+                    print(f"round3 R LMG拟合失败: {e}")
+                    geo_round3 = None
+
+                if geo_round3 is not None and check_ls_quality_v5(geo_round3, points, area):
+                    final_geo = geo_round3
+                # Round 3 失败或不合格，直接进保底
+
+    # 最终保底：用真实点重心(cx,cy) + 2n点MBR(半长轴/半短轴/倾角)作为椭圆
     if final_geo is None:
         try:
-            can_shu = re_ellipse_fitting(points)
-            final_geo = algebraic_to_geometric(can_shu)
-        except Exception:
+            # calculate_teacher_pargini 返回 [cx, cy, a, b, theta]
+            # points 用于计算重心，mirrored_points(2n点) 用于计算 MBR
+            final_geo = calculate_teacher_pargini(points, mirrored_points)
+            print("三轮拟合全不合格，使用 MBR 保底")
+        except Exception as e:
+            print(f"MBR保底失败: {e}")
             final_geo = None
-    
+
     return final_geo
