@@ -6,10 +6,10 @@ class Annealer:
     annealingRate = 0.0
     edge_judge = False
     flag = True
-    internal_vertices = 0
-    edge_vertices = 0
-    last_internal_vertices = 0
-    last_edge_vertices = 0
+    inner_points = 0
+    marginal_points = 0
+    last_inner_points = 0
+    last_marginal_points = 0
 
 
     def __init__(self, params=None):
@@ -71,27 +71,27 @@ class Annealer:
         intersection_cell_blocks = util.get_intersection_cell_blocks(cells)
 
         result = util.move_point(intersection_cell_blocks, self.annealingRate, self.edge_judge, self.flag, cells)
-        self.last_internal_vertices = self.internal_vertices
-        self.last_edge_vertices = self.edge_vertices
+        self.last_inner_points = self.inner_points
+        self.last_marginal_points = self.marginal_points
 
-        # move_point 约定：(计数, {'internal_vertices': int, 'edge_vertices': int})
+        # move_point 约定：(计数, {'inner_points': int, 'marginal_points': int})
         annealing_count = 0
         if isinstance(result, (tuple, list)) and len(result) >= 2 and isinstance(result[1], dict):
             annealing_count = result[0]
             stats = result[1]
             try:
-                self.internal_vertices = int(stats.get('internal_vertices', 0) or 0)
-                self.edge_vertices = int(stats.get('edge_vertices', 0) or 0)
+                self.inner_points = int(stats.get('inner_points', 0) or 0)
+                self.marginal_points = int(stats.get('marginal_points', 0) or 0)
             except (TypeError, ValueError):
-                self.internal_vertices = 0
-                self.edge_vertices = 0
+                self.inner_points = 0
+                self.marginal_points = 0
         else:
             try:
                 annealing_count = int(result) if not isinstance(result, (tuple, list)) else int(result[0])
             except (TypeError, ValueError, IndexError):
                 annealing_count = 0
-            self.internal_vertices = 0
-            self.edge_vertices = 0
+            self.inner_points = 0
+            self.marginal_points = 0
 
         self.flag = not self.flag
         try:

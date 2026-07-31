@@ -1007,7 +1007,7 @@ def get_annealing_rate(cb):
 '''
 
 
-def get_edge_annealing_rate(p_a, p_b, p_v, p_o):
+def get_marginal_annealing_rate(p_a, p_b, p_v, p_o):
     # print("---5.1")
     # print([p_a, p_v, p_o])
     angle1 = get_angle_by_three_point([p_a, p_v, p_o])
@@ -1050,7 +1050,8 @@ def set_annealing_options(use_inner_angle_sq_guard=True):
 
 
 def judge_if_annealing(cb, move_point):
-    # 如果移动点在三角形内部，则不移动 If the moving point is inside the triangle, it does not move
+    # 如果当前顶点已在三角形内部，则接近最优，不移动
+    # If the current vertex is already inside the triangle, it is near optimal, do not move
     if is_point_in_triangle(cb.cell1.points[cb.index1], cb.triangle):
         return -1
 
@@ -1150,7 +1151,7 @@ def get_point_from_line_and_2_point(x1, y1, line, p1, p2):
 '''
 
 
-def get_edge_move_point_last(cb, annealing_rate, cells):
+def get_marginal_move_point_last(cb, annealing_rate, cells):
     ##判断是否三个细胞都是边缘细胞，需要寻找两边一内的细胞块组合
     # print(---0)
     # print(cb)
@@ -1309,7 +1310,7 @@ def get_edge_move_point_last(cb, annealing_rate, cells):
     # print(---5)
     # print("point_move_v:", point_move_v)
 
-    # rate = get_edge_annealing_rate(point_a, point_b, point_v, point_o)
+    # rate = get_marginal_annealing_rate(point_a, point_b, point_v, point_o)
     rate = annealing_rate
 
     # print("rate:", rate)
@@ -1504,7 +1505,7 @@ def is_vertex_angle_safe_03(cell, index, candidate):
 def judge_by_intersection_cell_blocks_new(cb, move_point):
     """
     用于边缘退火的轻量级检查函数，复用原有 judge_by_intersection_cell_blocks 的逻辑，
-    但参数更简单，可直接被 get_edge_move_point 调用。
+    但参数更简单，可直接被 get_marginal_move_point 调用。
 
     回传：
         True  = 可以移动
@@ -1557,7 +1558,7 @@ def judge_by_intersection_cell_blocks_new(cb, move_point):
     return True
 #-------------------------
 def is_vertex_angle_safe_05(cell, index, candidate):
-    #利用get_edge_move_point函数获取预退火移动点，判断预退火点与相邻几个点构成的角度是否满足要求<=180°的要求，优先只判断边缘顶点相邻的两个角度
+    #利用get_marginal_move_point函数获取预退火移动点，判断预退火点与相邻几个点构成的角度是否满足要求<=180°的要求，优先只判断边缘顶点相邻的两个角度
     return True
 
 #修改边缘细胞的退火方法为：每个边缘顶点对应两个边缘角，将当前边缘顶点V沿较小边缘角的边缘边移动到目的地点P，使得两个边缘角相等,
@@ -1579,7 +1580,7 @@ def is_neighbors_angles_safe(cell, index_changed, candidate):
     angle_right = get_angle_by_three_point([p1, p, p2])
     return (angle_left < math.pi - 1e-9) and (angle_right < math.pi - 1e-9)
 
-def get_edge_move_point_last01_1127(cb, annealing_rate, cells):
+def get_marginal_move_point_last01_1127(cb, annealing_rate, cells):
     """
     新的边缘退火逻辑：
     1. 设置三个列表存储原始顶点、移动后顶点、移动前角度
@@ -1592,15 +1593,15 @@ def get_edge_move_point_last01_1127(cb, annealing_rate, cells):
     pre_angles = []             # 移动前的角度列表（存储元组：(angle1, angle2)）
 
     # 第二步：遍历细胞块获取边缘顶点和角度
-    edge_vertices = get_edge_vertices_from_cellblock(cb, cells)
-    #print("第一次：edge_vertices:", edge_vertices)
+    marginal_points = get_marginal_points_from_cellblock(cb, cells)
+    #print("第一次：marginal_points:", marginal_points)
 
-    edge_vertices =get_edge_vertices_directly(cells)
-    #print("第二次：edge_vertices:", edge_vertices)
+    marginal_points =get_marginal_points_directly(cells)
+    #print("第二次：marginal_points:", marginal_points)
 
-    edge_vertices =enhanced_get_edge_vertices(cells, min_shared_count=2)
-    # print("第三次：edge_vertices:", edge_vertices)
-    for vertex_info in edge_vertices:
+    marginal_points =enhanced_get_marginal_points(cells, min_shared_count=2)
+    # print("第三次：marginal_points:", marginal_points)
+    for vertex_info in marginal_points:
         point_v = vertex_info['point_v']  # 边缘顶点
         point_o = vertex_info['point_o']  # 共享顶点
         point_a = vertex_info['point_a']  # 相邻顶点A
@@ -1618,7 +1619,7 @@ def get_edge_move_point_last01_1127(cb, annealing_rate, cells):
 
     # 第三步：比较角度差并决定是否退火
     moved_count = 0
-    for i, vertex_info in enumerate(edge_vertices):
+    for i, vertex_info in enumerate(marginal_points):
         point_v = vertex_info['point_v']
         point_o = vertex_info['point_o']
         point_a = vertex_info['point_a']
@@ -1665,12 +1666,12 @@ def get_edge_move_point_last01_1127(cb, annealing_rate, cells):
             print(f"角度差太小({angle_diff:.4f} < {angle_threshold:.4f})，不移动顶点: {point_v}")
 
     # 可选：打印统计信息
-    # print(f"边缘退火统计: 总顶点数={len(edge_vertices)}, 移动顶点数={moved_count}")
+    # print(f"边缘退火统计: 总顶点数={len(marginal_points)}, 移动顶点数={moved_count}")
 
     return moved_count
 #------------------------------------------------------------
 #存在缺陷：
-def get_edge_move_point_last02_1127(cb, annealing_rate, cells):
+def get_marginal_move_point_last02_1127(cb, annealing_rate, cells):
     """
     修改后的边缘退火函数，使用新的边缘顶点获取方法
     """
@@ -1680,17 +1681,17 @@ def get_edge_move_point_last02_1127(cb, annealing_rate, cells):
     pre_angles = []             # 移动前的角度列表（存储元组：(angle1, angle2)）
 
     # 第二步：遍历细胞块获取边缘顶点和角度
-    #edge_vertices = get_edge_vertices_from_cellblock(cb, cells)
+    #marginal_points = get_marginal_points_from_cellblock(cb, cells)
 
 
 
-    edge_vertices =get_edge_vertices_directly(cells)
-    # print("第二次：edge_vertices:", edge_vertices)
+    marginal_points =get_marginal_points_directly(cells)
+    # print("第二次：marginal_points:", marginal_points)
 
-    #edge_vertices =get_edge_vertices(cells, min_shared_count=2)
-    #print("第三次：edge_vertices:", edge_vertices)
+    #marginal_points =get_marginal_points(cells, min_shared_count=2)
+    #print("第三次：marginal_points:", marginal_points)
 
-    for vertex_info in edge_vertices:
+    for vertex_info in marginal_points:
         point_v = vertex_info['point_v']  # 边缘顶点
         point_o = vertex_info['point_o']  # 共享顶点
         point_a = vertex_info['point_a']  # 相邻顶点A
@@ -1707,7 +1708,7 @@ def get_edge_move_point_last02_1127(cb, annealing_rate, cells):
         pre_angles.append((angle_AVO, angle_BVO))
 
     # # 第三步：处理每个边缘顶点，存储原始信息
-    # for vertex_info in edge_vertices:
+    # for vertex_info in marginal_points:
     #     vertex = vertex_info['vertex']
     #     sharing_cells = vertex_info['cells']
     #     neighbors_info = vertex_info['neighbors']
@@ -1720,7 +1721,7 @@ def get_edge_move_point_last02_1127(cb, annealing_rate, cells):
     # moved_count = 0
     # angle_threshold = math.radians(1.0)  # 1度阈值
 
-    # for i, vertex_info in enumerate(edge_vertices):
+    # for i, vertex_info in enumerate(marginal_points):
     #     vertex = vertex_info['vertex']
     #     angles = vertex_info['angles']
     #     sharing_cells = vertex_info['cells']
@@ -1773,7 +1774,7 @@ def get_edge_move_point_last02_1127(cb, annealing_rate, cells):
     # return moved_count
 
 
-def get_edge_move_point_last01_1129(cb, annealing_rate, cells):
+def get_marginal_move_point_last01_1129(cb, annealing_rate, cells):
     """
     全新边缘退火逻辑（按照用户要求）:
     1. 建立三个列表：原始顶点 / 移动后顶点 / 移动前角度
@@ -1965,7 +1966,7 @@ def get_edge_move_point_last01_1129(cb, annealing_rate, cells):
     moved_vertices.append(target_point)
     return 1
 #------------------------------------------------------------
-def get_edge_move_point_last02_1129(cb, annealing_rate, cells):
+def get_marginal_move_point_last02_1129(cb, annealing_rate, cells):
     """
     全新边缘退火逻辑（满足用户要求）:
     1. 识别边缘顶点并打印。
@@ -2153,7 +2154,7 @@ def get_edge_move_point_last02_1129(cb, annealing_rate, cells):
     return 1
 #----------------------------------------------------------------------
 
-def get_all_edge_vertices(cells):
+def get_all_marginal_points(cells):
     """
     获取所有边缘顶点（只被两个细胞共享的顶点）
 
@@ -2169,7 +2170,7 @@ def get_all_edge_vertices(cells):
             return abs(p1[0] - p2[0]) < tolerance and abs(p1[1] - p2[1]) < tolerance
         return False
 
-    all_edge_vertices = []
+    all_marginal_points = []
     vertex_to_cells = {}  # 记录每个顶点被哪些细胞共享
 
     # 统计每个顶点被多少个细胞共享
@@ -2189,12 +2190,12 @@ def get_all_edge_vertices(cells):
             p_key_list = list(p_key) if isinstance(p_key, tuple) else p_key
             for p in sharing_cells[0].points:
                 if points_equal(p, p_key_list):
-                    all_edge_vertices.append(p)
+                    all_marginal_points.append(p)
                     break
 
-    return all_edge_vertices
+    return all_marginal_points
 
-def find_edge_key_points_new(point_v, cells):
+def find_marginal_key_points_new(point_v, cells):
     """
     按照新逻辑找关键点：V -> A, B -> edge_cell1, edge_cell2 -> O
 
@@ -2231,7 +2232,7 @@ def find_edge_key_points_new(point_v, cells):
         return False
 
     # Step 1: 首先定位所有的边缘顶点，只被两个细胞共享的点为边缘顶点
-    all_edge_vertices = []
+    all_marginal_points = []
     vertex_to_cells = {}  # 记录每个顶点被哪些细胞共享
 
     # 统计每个顶点被多少个细胞共享
@@ -2251,21 +2252,21 @@ def find_edge_key_points_new(point_v, cells):
             p_key_list = list(p_key) if isinstance(p_key, tuple) else p_key
             for p in sharing_cells[0].points:
                 if points_equal(p, p_key_list):
-                    all_edge_vertices.append(p)
+                    all_marginal_points.append(p)
                     break
 
-    if len(all_edge_vertices) < 3:  # 至少需要V、A、B三个边缘顶点
-        print(f"[FindKeyPoints] 边缘顶点数量不足（{len(all_edge_vertices)}），无法进行边缘退火")
+    if len(all_marginal_points) < 3:  # 至少需要V、A、B三个边缘顶点
+        print(f"[FindKeyPoints] 边缘顶点数量不足（{len(all_marginal_points)}），无法进行边缘退火")
         return None
 
     # 验证point_v是否是边缘顶点
-    v_is_edge_vertex = False
-    for edge_vertex in all_edge_vertices:
-        if points_equal(edge_vertex, point_v):
-            v_is_edge_vertex = True
+    v_is_marginal_point = False
+    for marginal_point in all_marginal_points:
+        if points_equal(marginal_point, point_v):
+            v_is_marginal_point = True
             break
 
-    if not v_is_edge_vertex:
+    if not v_is_marginal_point:
         print(f"[FindKeyPoints] 输入的point_v不是边缘顶点（不是只被2个细胞共享），V点坐标: ({point_v[0]:.6f}, {point_v[1]:.6f})")
         return None
 
@@ -2304,48 +2305,48 @@ def find_edge_key_points_new(point_v, cells):
     idx_va = None
     idx_vb = None
 
-    edge_vertices_as_neighbors = []
-    for edge_vertex in all_edge_vertices:
+    marginal_points_as_neighbors = []
+    for marginal_point in all_marginal_points:
         # 跳过V本身
-        if points_equal(edge_vertex, point_v):
+        if points_equal(marginal_point, point_v):
             continue
 
         # 检查这个边缘顶点是否是V的邻点
-        edge_vertex_key = tuple(edge_vertex) if isinstance(edge_vertex, (list, tuple)) else edge_vertex
-        if edge_vertex_key in v_neighbors:
-            # 找到包含这条边（V-edge_vertex）的细胞
+        marginal_point_key = tuple(marginal_point) if isinstance(marginal_point, (list, tuple)) else marginal_point
+        if marginal_point_key in v_neighbors:
+            # 找到包含这条边（V-marginal_point）的细胞
             for cell in cells_with_v:
                 v_idx = v_indices[cell]
                 n = len(cell.points)
                 prev_point = cell.points[(v_idx - 1) % n]
                 next_point = cell.points[(v_idx + 1) % n]
 
-                # 检查edge_vertex是否是V的邻点
-                if points_equal(prev_point, edge_vertex) or points_equal(next_point, edge_vertex):
+                # 检查marginal_point是否是V的邻点
+                if points_equal(prev_point, marginal_point) or points_equal(next_point, marginal_point):
                     # 确保这个细胞是边缘细胞（layer == 1）
                     if cell.layer == 1:
-                        edge_vertices_as_neighbors.append({
-                            'point': edge_vertex,
+                        marginal_points_as_neighbors.append({
+                            'point': marginal_point,
                             'cell': cell,
                             'v_idx': v_idx,
-                            'neighbor_idx': (v_idx - 1) % n if points_equal(prev_point, edge_vertex) else (v_idx + 1) % n
+                            'neighbor_idx': (v_idx - 1) % n if points_equal(prev_point, marginal_point) else (v_idx + 1) % n
                         })
                         break
 
     # 找到两个不同的边缘顶点A和B（来自不同的边缘细胞）
-    if len(edge_vertices_as_neighbors) < 2:
-        print(f"[FindKeyPoints] 找不到两个与V构成边缘边的边缘顶点（找到{len(edge_vertices_as_neighbors)}个），V点坐标: ({point_v[0]:.6f}, {point_v[1]:.6f})")
+    if len(marginal_points_as_neighbors) < 2:
+        print(f"[FindKeyPoints] 找不到两个与V构成边缘边的边缘顶点（找到{len(marginal_points_as_neighbors)}个），V点坐标: ({point_v[0]:.6f}, {point_v[1]:.6f})")
         return None
 
     # 选择第一个作为A
-    edge_info_a = edge_vertices_as_neighbors[0]
+    edge_info_a = marginal_points_as_neighbors[0]
     point_a = edge_info_a['point']
     edge_cell1 = edge_info_a['cell']
     idx_va = edge_info_a['v_idx']
 
     # 找到来自不同细胞的第二个边缘顶点作为B
     edge_info_b = None
-    for edge_info in edge_vertices_as_neighbors[1:]:
+    for edge_info in marginal_points_as_neighbors[1:]:
         if edge_info['cell'] != edge_cell1 and not points_equal(edge_info['point'], point_a):
             edge_info_b = edge_info
             break
@@ -2430,13 +2431,13 @@ def find_edge_key_points_new(point_v, cells):
     }
 
 #----------------------------------------------------------------------
-def calculate_edge_annealing_distance(point_v, annealing_rate, cells):
+def calculate_marginal_annealing_distance(point_v, cells):
     """
     计算边缘顶点的退火距离（不实际移动，只计算距离）
+    距离 = V到目标点的欧氏距离（不乘退火速率），用于统一排序
 
     参数:
         point_v: 边缘顶点V [x, y]
-        annealing_rate: 退火速率
         cells: 所有细胞列表
 
     返回:
@@ -2445,7 +2446,7 @@ def calculate_edge_annealing_distance(point_v, annealing_rate, cells):
     import math
 
     # 使用新逻辑找关键点
-    key_points = find_edge_key_points_new(point_v, cells)
+    key_points = find_marginal_key_points_new(point_v, cells)
     if key_points is None:
         return 0.0
 
@@ -2496,16 +2497,12 @@ def calculate_edge_annealing_distance(point_v, annealing_rate, cells):
         # 使用V和B的中点B'作为目标点
         target_point = [(point_v[0] + point_b[0]) / 2, (point_v[1] + point_b[1]) / 2]
 
-    # 计算移动后的位置
-    candidate_V = [point_v[0] + (target_point[0] - point_v[0]) * annealing_rate,
-                   point_v[1] + (target_point[1] - point_v[1]) * annealing_rate]
-
-    # 计算退火距离（从V到candidate_V的距离）
-    distance = get_distance_point_point_by_list(point_v, candidate_V)
+    # 计算退火距离（从V到目标点的距离，不乘退火速率，统一用于排序）
+    distance = get_distance_point_point_by_list(point_v, target_point)
 
     return distance
 
-def get_edge_move_point(point_v, annealing_rate, cells):
+def get_marginal_move_point(point_v, annealing_rate, cells):
     """
     边缘退火逻辑（直接从边缘顶点V开始）：
     1. 输入边缘顶点V（必须是边缘顶点，即只被2个细胞共享）
@@ -2531,7 +2528,7 @@ def get_edge_move_point(point_v, annealing_rate, cells):
     #----------------------------------------
     # Step 1：使用新逻辑找关键点（V -> A, B -> edge_cell1, edge_cell2 -> O）
     #----------------------------------------
-    key_points = find_edge_key_points_new(point_v, cells)
+    key_points = find_marginal_key_points_new(point_v, cells)
     if key_points is None:
         print(f"[EdgeCheck] 使用新逻辑找不到关键点，退出，V点坐标: ({point_v[0]:.6f}, {point_v[1]:.6f})")
         return 0
@@ -2789,7 +2786,7 @@ def get_edge_move_point(point_v, annealing_rate, cells):
     return 1
 
 #-------------------------------------------------
-def get_edge_move_point_gradient(cb, annealing_rate, cells,
+def get_marginal_move_point_gradient(cb, annealing_rate, cells,
                                  max_iter=40, grad_eps=1e-6, init_lr=0.5, tol=1e-5):
     """
     基于数值梯度下降求使两个边缘角相等的目标点（更精确、平滑收敛）。
@@ -3047,12 +3044,12 @@ def update_vertex_position(old_vertex, new_vertex, sharing_cells):
                 break
 
 #------------------------------------------------------------
-def get_edge_vertices_from_cellblock_last(cb, cells):
+def get_marginal_points_from_cellblock_last(cb, cells):
     """
     从细胞块中提取边缘顶点信息
     返回包含顶点信息的字典列表
     """
-    edge_vertices_info = []
+    marginal_points_info = []
 
     # 识别边缘细胞
     if cb.cell1.layer != 1:
@@ -3065,7 +3062,7 @@ def get_edge_vertices_from_cellblock_last(cb, cells):
         edge_cell1 = cb.cell1
         edge_cell2 = cb.cell2
     else:
-        return edge_vertices_info  # 没有边缘细胞
+        return marginal_points_info  # 没有边缘细胞
 
     # 获取共享顶点O（三个细胞的交汇点）
     point_o = cb.cell1.points[cb.index1]
@@ -3078,7 +3075,7 @@ def get_edge_vertices_from_cellblock_last(cb, cells):
             break
 
     if point_v is None:
-        return edge_vertices_info
+        return marginal_points_info
 
     # 确定相邻顶点A和B
     if edge_cell1.points.index(point_v) - edge_cell1.points.index(point_o) > 0:
@@ -3098,10 +3095,10 @@ def get_edge_vertices_from_cellblock_last(cb, cells):
         'edge_cell2': edge_cell2
     }
 
-    edge_vertices_info.append(vertex_info)
-    return edge_vertices_info
+    marginal_points_info.append(vertex_info)
+    return marginal_points_info
 
-def get_edge_vertices_from_cellblock(cb, cells):
+def get_marginal_points_from_cellblock(cb, cells):
     """
     重写版本：放弃细胞块概念，直接基于细胞收集边缘顶点信息
     步骤：
@@ -3110,7 +3107,7 @@ def get_edge_vertices_from_cellblock(cb, cells):
     3. 找到边缘细胞的边缘顶点
     4. 将边缘顶点信息存放在列表中
     """
-    edge_vertices_info = []
+    marginal_points_info = []
 
     # 第一步：设置列表保存边缘顶点信息
     # 这个列表将包含字典，每个字典表示一个边缘顶点的信息
@@ -3148,14 +3145,14 @@ def get_edge_vertices_from_cellblock(cb, cells):
                 'vertex': list(vertex),  # 转回列表格式
                 'cells': sharing_cells,  # 共享该顶点的细胞
                 'neighbors': neighbor_info,  # 相邻顶点信息
-                'type': 'edge_vertex'  # 标记为边缘顶点
+                'type': 'marginal_point'  # 标记为边缘顶点
             }
 
-            edge_vertices_info.append(vertex_info)
+            marginal_points_info.append(vertex_info)
             print(f"找到边缘顶点: {vertex}")
 
-    print(f"总共找到 {len(edge_vertices_info)} 个边缘顶点")
-    return edge_vertices_info
+    print(f"总共找到 {len(marginal_points_info)} 个边缘顶点")
+    return marginal_points_info
 
 
 def get_vertex_neighbors(vertex, sharing_cells):
@@ -3191,12 +3188,12 @@ def get_vertex_neighbors(vertex, sharing_cells):
     return neighbor_info
 
 
-def get_edge_vertices_directly(cells):
+def get_marginal_points_directly(cells):
     """
     直接获取所有边缘顶点的替代函数
     这个函数不依赖于细胞块，直接从细胞中提取边缘顶点
     """
-    edge_vertices = []
+    marginal_points = []
 
     # 第一步：收集所有边缘细胞
     edge_cells = [cell for cell in cells if cell.layer != 1]
@@ -3249,16 +3246,16 @@ def get_edge_vertices_directly(cells):
                 'vertex': info['vertex'],
                 'cells': info['cells'],
                 'neighbors': neighbor_cells,
-                'type': 'edge_vertex',
+                'type': 'marginal_point',
                 'shared_count': len(info['cells'])
             }
 
-            edge_vertices.append(vertex_info)
+            marginal_points.append(vertex_info)
 
-    return edge_vertices
+    return marginal_points
 
 
-def enhanced_get_edge_vertices(cells, min_shared_count=2):
+def enhanced_get_marginal_points(cells, min_shared_count=2):
     """
     增强版的边缘顶点获取函数
     可以指定最小共享细胞数
@@ -3297,7 +3294,7 @@ def enhanced_get_edge_vertices(cells, min_shared_count=2):
                 vertex_cell_map[vertex_key]['cell_ids'].add(cell_id)
 
     # 筛选出满足共享条件的顶点
-    edge_vertices = []
+    marginal_points = []
     for vertex_key, info in vertex_cell_map.items():
         shared_count = len(info['cells'])
 
@@ -3308,12 +3305,12 @@ def enhanced_get_edge_vertices(cells, min_shared_count=2):
             detailed_info = get_detailed_vertex_info(info['vertex'], info['cells'], info['indices'])
             detailed_info['shared_count'] = shared_count
 
-            edge_vertices.append(detailed_info)
+            marginal_points.append(detailed_info)
 
-    print(f"总共找到 {len(edge_vertices)} 个符合条件的边缘顶点")
-    return edge_vertices
+    print(f"总共找到 {len(marginal_points)} 个符合条件的边缘顶点")
+    return marginal_points
 
-def get_edge_vertices(cells, min_shared_count=2):
+def get_marginal_points(cells, min_shared_count=2):
     """
     增强版的边缘顶点获取函数
     可以指定最小共享细胞数
@@ -3349,27 +3346,27 @@ def get_edge_vertices(cells, min_shared_count=2):
     print(f"统计了 {len(vertex_shared_count)} 个唯一顶点的共享信息")
 
     # 找出满足条件的边缘顶点：被恰好min_shared_count个细胞共享
-    edge_vertices = []
+    marginal_points = []
 
     for vertex, sharing_cells in vertex_shared_count.items():
         share_count = len(sharing_cells)
 
         # 如果顶点被恰好min_shared_count个边缘细胞共享，则认为是边缘顶点
         if share_count == min_shared_count:
-            edge_vertices.append(vertex)
+            marginal_points.append(vertex)
 
-    print(f"找到 {len(edge_vertices)} 个边缘顶点（被恰好 {min_shared_count} 个边缘细胞共享）")
+    print(f"找到 {len(marginal_points)} 个边缘顶点（被恰好 {min_shared_count} 个边缘细胞共享）")
 
     # 可选：打印详细信息用于调试
-    if edge_vertices and len(edge_vertices) <= 20:  # 避免输出过多信息
+    if marginal_points and len(marginal_points) <= 20:  # 避免输出过多信息
         print("边缘顶点详情：")
-        for i, vertex in enumerate(edge_vertices[:10]):  # 只显示前10个
+        for i, vertex in enumerate(marginal_points[:10]):  # 只显示前10个
             sharing_cells = vertex_shared_count[vertex]
             print(f"  顶点 {i+1}: 被边缘细胞 {sharing_cells} 共享")
-        if len(edge_vertices) > 10:
-            print(f"  ... 以及 {len(edge_vertices) - 10} 个更多顶点")
+        if len(marginal_points) > 10:
+            print(f"  ... 以及 {len(marginal_points) - 10} 个更多顶点")
 
-    return edge_vertices
+    return marginal_points
 
 def get_detailed_vertex_info(vertex, sharing_cells, indices):
     """
@@ -3558,7 +3555,7 @@ def is_move_safe(edge_cell1, edge_cell2, point_v, point_o, move_point):
     return True
 
 
-def get_edge_move_point_test_default(cb, annealing_rate, cells):
+def get_marginal_move_point_test_default(cb, annealing_rate, cells):
     """
     基于角度判断的边缘退火移动函数
     将边缘顶点V沿较小边缘角的边缘边移动，使得两个边缘角相等
@@ -3685,7 +3682,7 @@ def get_edge_move_point_test_default(cb, annealing_rate, cells):
         return 0
 
 
-def get_edge_move_point_last(cb, annealing_rate, cells):
+def get_marginal_move_point_last(cb, annealing_rate, cells):
     """
     基于角度判断的边缘退火移动函数
     将边缘顶点V沿较小边缘角的边缘边移动，使得两个边缘角相等
@@ -4096,670 +4093,133 @@ def is_vertex_angle_safe_02(cell, index, candidate):
 
     return True
 
-def move_point_last01(intersection_cell_blocks, annealing_rate, edge_judge, flag, cells):
+def move_point(intersection_cell_blocks, annealing_rate, edge_judge, flag, cells):
     """
-    修改版 move_point：对边缘退火增加退化/重试策略，优先使用现有 get_edge_move_point，
-    失败时尝试缩小步长重试，再尝试数值梯度求解（若实现了 get_edge_move_point_gradient）。
+    退火移动函数（统一队列版）：
+    1. 统一收集 marginal points（边缘顶点）和 inner points（内部顶点）
+    2. 按退火距离 D 降序排序（一次排序，本轮不变）
+    3. 依序遍历：
+       - marginal: 移动前重算 D_current，若 <=0 跳过；否则执行边缘退火
+       - inner: 不加距离跳过，仅靠 judge_if_annealing 判断
+    返回: (annealing_count, stats_dict)
     """
-    count = 0
-    now_count = 0
-    edge_count = 0
-    need_not_count = 0
-    best_count = 0
-    judge_180_count = 0
-    judge_inner_angle_count = 0
-    edge_annealing_points = 0
+    count = 0  # 待退火细胞块总数 Total number of cell blocks to be annealed
+    now_count = 0  # 当前待退火细胞块总数 Total number of cell blocks to be returned
+    marginal_count = 0  # 边缘细胞块总数 Total number of marginal cell blocks
+    need_not_count = 0  # 不需要退火细胞块总数 Total number of cell blocks not required to be annealed
+    best_count = 0  # 接近最优退火细胞块总数 The total number of cell blocks was close to the optimal annealing
+    judge_180_count = 0  # 退火后不满足凸多边形的细胞块总数 Total number of cell blocks not meeting convex polygon after annealing
+    judge_inner_angle_count = 0  # 退火后内角平方和会增大的细胞块总数 The total number of cell blocks increased after annealing
+    marginal_annealing_points = 0
     inner_annealing_points = 0
 
-    # 排序（保持原行为）
-    sort_cells_by_distance(intersection_cell_blocks, cells)
+    # 如果边缘退火开启，输出一次所有边缘顶点信息
+    if edge_judge:
+        all_marginal_points = get_all_marginal_points(cells)
+        print(f"[MarginalPoints] 全部边缘顶点个数: {len(all_marginal_points)}")
+        print(f"[MarginalPoints] 边缘顶点坐标列表:")
+        for i, vertex in enumerate(all_marginal_points):
+            print(f"  [{i+1}] ({vertex[0]:.6f}, {vertex[1]:.6f})")
 
+    # ============================================================
+    # Step 1: 统一收集所有顶点（marginal + inner）到队列
+    # ============================================================
+    vertex_queue = []
+
+    # 收集 marginal points（边缘顶点）
+    if edge_judge:
+        all_marginal_points = get_all_marginal_points(cells)
+        for point_v in all_marginal_points:
+            D = calculate_marginal_annealing_distance(point_v, cells)
+            vertex_queue.append({
+                'type': 'marginal',
+                'point': point_v,
+                'distance': D
+            })
+
+    # 收集 inner points（内部顶点，来自 intersection_cell_blocks）
     for cb in intersection_cell_blocks:
-        count += 1
-        now_count += 1
+        point_g = cb.getTriCentreOfGravity()  # Point 对象
+        current_point = cb.cell1.points[cb.index1]  # 列表 [x, y]
+        # point_g 是 Point 对象（有 .x .y），不能用 [] 索引
+        D = math.sqrt((current_point[0] - point_g.x) ** 2 + (current_point[1] - point_g.y) ** 2)
+        vertex_queue.append({
+            'type': 'inner',
+            'cb': cb,
+            'distance': D
+        })
 
-        # 判断是否为"边缘块"（三个 cell 中至少有两个 layer==1）
-        is_edge_block = (
-            (cb.cell1.layer == 1 and cb.cell2.layer == 1) or
-            (cb.cell1.layer == 1 and cb.cell3.layer == 1) or
-            (cb.cell2.layer == 1 and cb.cell3.layer == 1)
-        )
+    # ============================================================
+    # Step 2: 按退火距离 D 降序排序（一次排序，本轮不变）
+    # ============================================================
+    vertex_queue.sort(key=lambda x: x['distance'], reverse=True)
 
-        if is_edge_block and edge_judge:
-            # --------------- 边缘退火处理 ---------------
-            # 首先用现有的函数尝试一次（不改变 annealing_rate）
-            edge_move_point = get_edge_move_point(cb, annealing_rate, cells)
-
-            if edge_move_point and edge_move_point > 0:
-                edge_annealing_points += 1
-                edge_count += 1
-                # 跳过内部退火（保持原逻辑）
+    # ============================================================
+    # Step 3: 依序遍历，执行退火
+    # ============================================================
+    for item in vertex_queue:
+        if item['type'] == 'marginal':
+            # marginal point：移动前重算退火距离（使用最新坐标）
+            point_v = item['point']
+            current_distance = calculate_marginal_annealing_distance(point_v, cells)
+            # 如果距离为0，说明不需要退火，跳过
+            if current_distance <= 0:
                 continue
-
-            # 如果首次失败，尝试退化策略：逐步缩小 annealing_rate 重试
-            # 例如尝试原始、/2、/4、/8（最多重试3次）
-            tried = False
-            rates_to_try = [annealing_rate * (0.5 ** k) for k in range(1, 4)]
-            for r in rates_to_try:
-                edge_move_point = None
-                try:
-                    edge_move_point = get_edge_move_point(cb, r, cells)
-                except Exception:
-                    edge_move_point = None
-
-                if edge_move_point and edge_move_point > 0:
-                    edge_annealing_points += 1
-                    edge_count += 1
-                    tried = True
-                    break
-
-            if tried:
-                # 成功后继续下一个 cb（保持原有 continue 行为）
-                continue
-
-            # 如果仍失败且存在更强的数值方法（梯度/优化），调用它做最后尝试
-            # 该函数名 get_edge_move_point_gradient 在之前讨论中已提供（若未实现则跳过）
-            try:
-                if 'get_edge_move_point_gradient' in globals():
-                    grad_res = get_edge_move_point_gradient(cb, annealing_rate, cells)
-                    if grad_res and grad_res > 0:
-                        edge_annealing_points += 1
-                        edge_count += 1
-                        continue
-            except Exception:
-                # 若梯度方法报错，则忽略（保持稳健）
-                pass
-
-            # 所有尝试都失败：记录并继续（不阻塞）
-            # 不使用 continue here? 保持原逻辑：边缘块处理完后跳过内部退火
-            # 但为了兼容旧返回值，这里直接 continue
-            continue
-
+            # 执行边缘退火
+            marginal_move_result = get_marginal_move_point(point_v, annealing_rate, cells)
+            if marginal_move_result > 0:
+                marginal_annealing_points += 1
         else:
-            # --------------- 内部退火处理 ---------------
-            point_g = cb.getTriCentreOfGravity()
-            move_flag = False
-            move_point = get_point_of_destination(cb.cell1.points[cb.index1], point_g, annealing_rate)
-            flag_index = judge_if_annealing(cb, move_point)
+            # inner point：不加距离跳过，仅靠 judge_if_annealing 判断
+            cb = item['cb']
+            count += 1  # 总数+1 Total + 1
+            now_count += 1  # 当前总数+1 Current total + 1
 
-            if flag_index == 0:
+            # 重新获取重心（使用最新坐标）
+            point_g = cb.getTriCentreOfGravity()
+
+            move_flag = False
+            move_point_result = get_point_of_destination(cb.cell1.points[cb.index1], point_g, annealing_rate)
+            flag_index = judge_if_annealing(cb, move_point_result)
+            if flag_index == 0:  # 如果可以移动，则返回true
                 move_flag = True
                 inner_annealing_points += 1
             elif flag_index == -1:
                 best_count += 1
             elif flag_index == -2:
                 need_not_count += 1
+                print("need_not_count:", need_not_count)
             elif flag_index == -3:
                 judge_180_count += 1
+                print("judge_180_count:", judge_180_count)
             elif flag_index == -4:
                 judge_inner_angle_count += 1
 
-            if not move_flag:
+            if not move_flag:  # 经判断，该点无法退火
                 continue
-
-            # 执行内部移动（保持现有写回方式）
-            cb.cell1.points[cb.index1] = [move_point.x, move_point.y]
-            cb.cell2.points[cb.index2] = [move_point.x, move_point.y]
-            cb.cell3.points[cb.index3] = [move_point.x, move_point.y]
-            try:
-                cb.cell1.setVertex()
-                cb.cell2.setVertex()
-                cb.cell3.setVertex()
-            except Exception:
-                pass
-
-    # 输出统计信息（与原代码格式兼容）
-    actual_annealed_cell_blocks = edge_annealing_points + inner_annealing_points
-    print("一次退火完成，本次退火相关信息如下：")
-    print("应退火细胞块总数：{0}，实际退火细胞块总数：{1},实际退火的边缘顶点{2},实际退火的内部顶点{3}".format(
-        now_count,
-        actual_annealed_cell_blocks,
-        edge_annealing_points,
-        inner_annealing_points
-    ))
-
-    # 为兼容老调用返回值（原来返回 now_count - edge_count - need_not_count ...）
-    try:
-        return actual_annealed_cell_blocks, {'edge_vertices': edge_annealing_points, 'internal_vertices': inner_annealing_points}
-    except Exception:
-        # Fallback：返回整数
-        return actual_annealed_cell_blocks
-
-def move_point(intersection_cell_blocks, annealing_rate, edge_judge, flag, cells):
-    # """修改后的退火移动函数，增加统计功能"""
-
-    # # 初始化统计管理器
-    # if stats_manager is None:
-    #     #stats_manager = AnnealingStatistics()
-    #     stats_manager = annealing_statistics()
-
-    count = 0  # 待退火细胞块总数 Total number of cell blocks to be annealed
-    now_count = 0  # 当前待退火细胞块总数 Total number of cell blocks to be returned
-    edge_count = 0  # 边缘细胞块总数 Total number of marginal cell blocks
-    need_not_count = 0  # 不需要退火细胞块总数 Total number of cell blocks not required to be annealed
-    best_count = 0  # 接近最优退火细胞块总数 The total number of cell blocks was close to the optimal annealing
-    judge_180_count = 0  # 退火后不满足凸多边形的细胞块总数 Total number of cell blocks not meeting convex polygon after annealing
-    judge_inner_angle_count = 0  # 退火后内角平方和会增大的细胞块总数 The total number of cell blocks increased after annealing
-    edge_annealing_points = 0
-    inner_annealing_points = 0
-
-    # 如果边缘退火开启，输出一次所有边缘顶点信息
-    if edge_judge:
-        all_edge_vertices = get_all_edge_vertices(cells)
-        print(f"[EdgeVertices] 全部边缘顶点个数: {len(all_edge_vertices)}")
-        print(f"[EdgeVertices] 边缘顶点坐标列表:")
-        for i, vertex in enumerate(all_edge_vertices):
-            print(f"  [{i+1}] ({vertex[0]:.6f}, {vertex[1]:.6f})")
-
-    # 在这里对intersection_cell_blocks进行一个排序 Here, the cross section_ cell_ Blocks to sort
-    #sort_intersection_cell_blocks(intersection_cell_blocks)
-
-    # 在这里对cells进行按照距离进行排序
-    sort_cells_by_distance(intersection_cell_blocks,cells)
-
-    # 如果边缘退火开启，先处理所有边缘顶点
-    if edge_judge:
-        all_edge_vertices = get_all_edge_vertices(cells)
-
-        # Step 1: 计算所有边缘顶点的初始退火距离并排序
-        edge_vertex_info = []
-        for point_v in all_edge_vertices:
-            # 计算初始退火距离（用于排序）
-            initial_distance = calculate_edge_annealing_distance(point_v, annealing_rate, cells)
-            edge_vertex_info.append({
-                'point_v': point_v,
-                'initial_distance': initial_distance
-            })
-
-        # 按照初始退火距离由大到小排序
-        edge_vertex_info.sort(key=lambda x: x['initial_distance'], reverse=True)
-
-        # Step 2: 按排序后的顺序处理边缘顶点
-        # 每次处理前重新计算当前顶点的退火距离（使用最新坐标）
-        for vertex_info in edge_vertex_info:
-            point_v = vertex_info['point_v']
-
-            # 重新计算当前顶点的退火距离（使用最新的细胞结构）
-            current_distance = calculate_edge_annealing_distance(point_v, annealing_rate, cells)
-
-            # 如果距离为0，说明不需要退火，跳过
-            if current_distance <= 0:
-                continue
-
-            # 执行边缘退火
-            edge_move_result = get_edge_move_point(point_v, annealing_rate, cells)
-            if edge_move_result > 0:
-                edge_annealing_points += 1
-
-    # 移动交汇点 move intersection（内部退火）
-    for cb in intersection_cell_blocks:
-        # annealing_rate = get_annealing_rate(cb) # 根据角度计算速率 （已弃用）
-        count += 1  # 总数+1 Total + 1
-
-        # 取消奇偶序号细胞块判断
-        # if flag:
-        #     if count % 2 == 0:
-        #         continue
-        # else:
-        #     if not count % 2 == 0:
-        #         continue
-
-        now_count += 1  # 当前总数+1 Current total + 1
-
-        # 跳过边缘细胞块（已在上面处理）
-        # if (cb.cell1.layer == 1 and cb.cell2.layer == 1) \
-        #         or (cb.cell1.layer == 1 and cb.cell3.layer == 1) \
-        #         or (cb.cell2.layer == 1 and cb.cell3.layer == 1):
-        #     continue
-        # else:
-        point_g = cb.getTriCentreOfGravity()
-
-
-        '''
-        根据角度判断标准，循环设置退火速率（已弃用）
-        '''
-        # annealing_rate_list = [0.1, 0.06, 0.03, 0.02, 0.01]
-        # move_flag = False
-        # while True:
-        #     move_point = get_point_of_destination(cb.cell1.points[cb.index1], point_g, annealing_rate)
-        #     flag_index = judge_if_annealing(cb, move_point)
-        #     if flag_index == 0:  # 如果可以移动，则直接退出循环
-        #         move_flag = True
-        #         break
-        #     if annealing_rate == 0.01:  # 如果循环到最后也不可移动，则返回False
-        #         if flag_index == -1:
-        #             best_count += 1
-        #         elif flag_index == -2:
-        #             need_not_count += 1
-        #         elif flag_index == -3:
-        #             judge_180_count += 1
-        #         elif flag_index == -4:
-        #             judge_inner_angle_count += 1
-        #         move_flag = False
-        #         break
-        #
-        #     annealing_rate = annealing_rate_list[annealing_rate_list.index(annealing_rate)+1]  # 改变退火速率，重新判断
-
-        '''
-        根据用户输入设置退火速率
-        '''
-        move_flag = False
-        move_point = get_point_of_destination(cb.cell1.points[cb.index1], point_g, annealing_rate)
-        flag_index = judge_if_annealing(cb, move_point)
-        if flag_index == 0:  # 如果可以移动，则返回true
-            move_flag = True
-            inner_annealing_points+=1
-        elif flag_index == -1:
-            best_count += 1
-            #print("best_count:", best_count)
-        elif flag_index == -2:
-            need_not_count += 1
-            #这两个细胞块数值接收不到
-            print("need_not_count:", need_not_count)
-        elif flag_index == -3:
-            judge_180_count += 1
-            ##这两个细胞块数值接收不到
-            print("judge_180_count:", judge_180_count)
-        elif flag_index == -4:
-            judge_inner_angle_count += 1
-            #print("judge_inner_angle_count:", judge_inner_angle_count)
-
-
-
-        if not move_flag:  # 经判断，该点无法退火
-            continue
-        # print(annealing_rate)
-        # 移动 move
-        cb.cell1.points[cb.index1] = [move_point.x, move_point.y]
-        cb.cell2.points[cb.index2] = [move_point.x, move_point.y]
-        cb.cell3.points[cb.index3] = [move_point.x, move_point.y]
-        cb.cell1.setVertex()
-        cb.cell2.setVertex()
-        cb.cell3.setVertex()
-
-
-    # 计算实际退火细胞块总数（正确的方法）
-    actual_annealed_cell_blocks = edge_annealing_points + inner_annealing_points
-    # 输出相关信息 Output relevant information
-    print("一次退火完成，本次退火相关信息如下：")
-    print("应退火细胞块总数：{0}，实际退火细胞块总数：{1},实际退火的边缘顶点{2},实际退火的内部顶点{3}".format(
-        now_count,
-        #now_count - edge_count - need_not_count - best_count - judge_180_count - judge_inner_angle_count
-        actual_annealed_cell_blocks
-        , edge_annealing_points,
-        inner_annealing_points
-    ))
-
-    # 与 AnnealingGUI.Annealer 约定：元组第二项为内外退火顶点数，供统计面板等使用
-    annealing_count = now_count - edge_count - need_not_count - best_count - judge_180_count - judge_inner_angle_count
-    stats = {
-        'edge_vertices': edge_annealing_points,
-        'internal_vertices': inner_annealing_points,
-    }
-    return annealing_count, stats
-
-def move_point_after(intersection_cell_blocks, annealing_rate, edge_judge, flag, cells):
-    # """修改后的退火移动函数，增加统计功能"""
-
-    # # 初始化统计管理器
-    # if stats_manager is None:
-    #     #stats_manager = AnnealingStatistics()
-    #     stats_manager = annealing_statistics()
-
-    count = 0
-    now_count = 0
-    edge_count = 0
-    need_not_count = 0
-    best_count = 0
-    judge_180_count = 0
-    judge_inner_angle_count = 0
-    edge_vertices_moved = 0
-    internal_vertices_moved = 0
-
-    # 使用退火距离排序
-    pending = sort_cells_by_distance(intersection_cell_blocks, cells)
-
-    # 移动交汇点（实时更新剩余块的退火距离并重排）
-    while pending:
-        info = pending.pop(0)
-        cb = info['cell_block']
-        # annealing_rate = get_annealing_rate(cb) # 根据角度计算速率 （已弃用）
-        count += 1  # 总数+1 Total + 1
-
-        # 取消奇偶序号细胞块判断
-        # if flag:
-        #     if count % 2 == 0:
-        #         continue
-        # else:
-        #     if not count % 2 == 0:
-        #         continue
-
-
-        now_count += 1  # 当前总数+1 Current total + 1
-
-        # if edge_judge:
-        #     # 边缘细胞是否需要参与退火 Do marginal cells need to participate in annealing
-        #     if not cb.cell1.ok or not cb.cell2.ok or not cb.cell3.ok:
-        #         edge_count += 1
-        #         continue
-        if edge_judge:
-            #print("记录到边缘进行移动01")
-            if (cb.cell1.layer == 1 and cb.cell2.layer == 1) \
-                    or (cb.cell1.layer == 1 and cb.cell3.layer == 1) \
-                    or (cb.cell2.layer == 1 and cb.cell3.layer == 1):
-
-                # now_count -= 1
-                edge_move_point = get_edge_move_point(cb, annealing_rate, cells)
-                if edge_move_point > 0:
-                    edge_vertices_moved += 1
-                    print("统计到边缘退火顶点")
-                    edge_count += 1
-                    pending = sort_cells_by_distance([i['cell_block'] for i in pending], cells)
-                    continue
-                # print(edge_move_point)
-                # print("ppp", ppp)
-                # if ppp in cb.cell1.points:
-                #     print("true")
-                # else:
-                #     print("false")
-                # continue  # todo::需要再修改
-
-
-        # print(10)
-        point_g = cb.getTriCentreOfGravity()
-
-
-        # 退火速率按用户输入与 k_R 组合，不再使用旧的循环策略
-
-        '''
-        根据用户输入设置退火速率
-        '''
-        move_flag = False
-        move_point = get_point_of_destination(cb.cell1.points[cb.index1], point_g, annealing_rate)
-        flag_index = judge_if_annealing(cb, move_point)
-        if flag_index == 0:  # 如果可以移动，则返回true
-            move_flag = True
-        elif flag_index == -1:
-            best_count += 1
-        elif flag_index == -2:
-            need_not_count += 1
-        elif flag_index == -3:
-            judge_180_count += 1
-        elif flag_index == -4:
-            judge_inner_angle_count += 1
-
-        # '''
-        # 根据用户输入设置退火速率
-        # '''
-        # move_flag = False
-        # move_point = get_point_of_destination(cb.cell1.points[cb.index1], point_g, annealing_rate * k_R)
-        # flag_index = judge_if_annealing(cb, move_point)
-        # if flag_index == 0:
-        #     candidate = [move_point.x, move_point.y]
-        #     safe = (
-        #         is_vertex_angle_safe(cb.cell1, cb.index1, candidate) and
-        #         is_neighbors_angles_safe(cb.cell1, cb.index1, candidate) and
-
-        #         is_vertex_angle_safe(cb.cell2, cb.index2, candidate) and
-        #         is_neighbors_angles_safe(cb.cell2, cb.index2, candidate) and
-
-        #         is_vertex_angle_safe(cb.cell3, cb.index3, candidate) and
-        #         is_neighbors_angles_safe(cb.cell3, cb.index3, candidate)
-        #     )
-        #     if safe:
-        #         move_flag = True
-        #     else:
-        #         judge_180_count += 1
-        # elif flag_index == -1:
-        #     best_count += 1
-        # elif flag_index == -2:
-        #     need_not_count += 1
-        # elif flag_index == -3:
-        #     judge_180_count += 1
-        # elif flag_index == -4:
-        #     judge_inner_angle_count += 1
-
-        #print("进行退火判断测试01")
-
-        if not move_flag:  # 经判断，该点无法退火
-            #print("进行退火判断测试02")
-            continue
-
-        # if move_flag:  # 经判断，该点无法退火
-        #     continue
-        # print(annealing_rate)
-        # 移动 move
-        #print("进行退火判断测试03")
-        cb.cell1.points[cb.index1] = [move_point.x, move_point.y]
-        cb.cell2.points[cb.index2] = [move_point.x, move_point.y]
-        cb.cell3.points[cb.index3] = [move_point.x, move_point.y]
-        cb.cell1.setVertex()
-        cb.cell2.setVertex()
-        cb.cell3.setVertex()
-        #internal_vertices_moved += 1
-        pending = sort_cells_by_distance([i['cell_block'] for i in pending], cells)
-        #print("进行退火判断测试04")
-
-    # 输出相关信息 Output relevant information
-    print("一次退火完成，本次退火相关信息如下：")
-    print("应退火细胞块总数：{0}，实际退火细胞块总数：{1},实际退火的边缘顶点{2},实际退火的内部顶点{3}".format(
-        now_count,
-        now_count - edge_count - need_not_count - best_count - judge_180_count - judge_inner_angle_count
-        , edge_vertices_moved,
-        internal_vertices_moved
-    ))
-    # return (
-    #     now_count - edge_count - need_not_count - best_count - judge_180_count - judge_inner_angle_count,
-    #     {'edge_vertices': edge_vertices_moved, 'internal_vertices': internal_vertices_moved}
-    # )
-
-
-def move_point_temp(intersection_cell_blocks, annealing_rate, edge_judge, flag, cells, stats_manager=None, round_number=0):
-    """修改后的退火移动函数，增加统计功能"""
-
-    # # 初始化统计管理器
-    # if stats_manager is None:
-    #     stats_manager = AnnealingStatistics()
-
-    # 统计顶点类型
-    # stats_manager.count_vertex_types(cells, intersection_cell_blocks)
-
-    count = 0
-    now_count = 0
-    edge_count = 0
-    need_not_count = 0
-    best_count = 0
-    judge_180_count = 0
-    judge_inner_angle_count = 0
-
-    # 记录本轮被退火的顶点
-    annealed_vertices_this_round = set()
-
-    # 在这里对intersection_cell_blocks进行排序
-    # sort_intersection_cell_blocks(intersection_cell_blocks)
-
-    # 移动交汇点
-    for cb in intersection_cell_blocks:
-        count += 1
-        now_count += 1
-
-        # 记录当前顶点
-        current_vertex = tuple(cb.cell1.points[cb.index1])
-        vertex_type = stats_manager.vertex_type_dict.get(current_vertex, "unknown")
-
-        if edge_judge:
-            if (cb.cell1.layer == 1 and cb.cell2.layer == 1) or \
-               (cb.cell1.layer == 1 and cb.cell3.layer == 1) or \
-               (cb.cell2.layer == 1 and cb.cell3.layer == 1):
-
-                edge_move_point = get_edge_move_point(cb, annealing_rate, cells)
-                if edge_move_point > 0:
-                    edge_count += 1
-                    annealed_vertices_this_round.add(current_vertex)
-                    continue
-
-        point_g = cb.getTriCentreOfGravity()
-        move_point = get_point_of_destination(cb.cell1.points[cb.index1], point_g, annealing_rate)
-        flag_index = judge_if_annealing(cb, move_point)
-
-        if flag_index == 0:
-            # 移动顶点
-            cb.cell1.points[cb.index1] = [move_point.x, move_point.y]
-            cb.cell2.points[cb.index2] = [move_point.x, move_point.y]
-            cb.cell3.points[cb.index3] = [move_point.x, move_point.y]
+            # 移动 move
+            cb.cell1.points[cb.index1] = [move_point_result.x, move_point_result.y]
+            cb.cell2.points[cb.index2] = [move_point_result.x, move_point_result.y]
+            cb.cell3.points[cb.index3] = [move_point_result.x, move_point_result.y]
             cb.cell1.setVertex()
             cb.cell2.setVertex()
             cb.cell3.setVertex()
 
-            # 记录被退火的顶点
-            annealed_vertices_this_round.add(current_vertex)
-        else:
-            if flag_index == -1:
-                best_count += 1
-            elif flag_index == -2:
-                need_not_count += 1
-            elif flag_index == -3:
-                judge_180_count += 1
-            elif flag_index == -4:
-                judge_inner_angle_count += 1
-
-    # 更新统计信息
-    actual_annealed_count = len(annealed_vertices_this_round)
-    stats_manager.update_annealing_count(actual_annealed_count)
-
-    # 打印详细统计信息
-    print(f"\n=== 第{round_number}轮退火详细统计 ===")
-    print(f"应退火细胞块总数: {now_count}")
-    print(f"实际退火细胞块总数: {actual_annealed_count}")
-    print(f"边缘退火细胞块数: {edge_count}")
-    print(f"已达最优细胞块数: {best_count}")
-    print(f"无需退火细胞块数: {need_not_count}")
-    print(f"几何约束拒绝数: {judge_180_count}")
-    print(f"内角优化拒绝数: {judge_inner_angle_count}")
-
-    # 打印顶点类型统计
-    stats_manager.print_statistics(round_number)
-
-    return actual_annealed_count, stats_manager
-
-def move_point_last02(intersection_cell_blocks, annealing_rate, edge_judge, flag, cells):
-    count = 0  # 待退火细胞块总数 Total number of cell blocks to be annealed
-    now_count = 0  # 当前待退火细胞块总数 Total number of cell blocks to be returned
-    edge_count = 0  # 边缘细胞块总数 Total number of marginal cell blocks
-    need_not_count = 0  # 不需要退火细胞块总数 Total number of cell blocks not required to be annealed
-    best_count = 0  # 接近最优退火细胞块总数 The total number of cell blocks was close to the optimal annealing
-    judge_180_count = 0  # 退火后不满足凸多边形的细胞块总数 Total number of cell blocks not meeting convex polygon after annealing
-    judge_inner_angle_count = 0  # 退火后内角平方和会增大的细胞块总数 The total number of cell blocks increased after annealing
-
-    # 在这里对intersection_cell_blocks进行一个排序 Here, the cross section_ cell_ Blocks to sort
-    sort_intersection_cell_blocks(intersection_cell_blocks)
-
-    # 移动交汇点 move intersection
-    for cb in intersection_cell_blocks:
-        # annealing_rate = get_annealing_rate(cb) # 根据角度计算速率 （已弃用）
-        count += 1  # 总数+1 Total + 1
-
-        # 取消奇偶序号细胞块判断
-        # if flag:
-        #     if count % 2 == 0:
-        #         continue
-        # else:
-        #     if not count % 2 == 0:
-        #         continue
-
-
-        now_count += 1  # 当前总数+1 Current total + 1
-
-        # if edge_judge:
-        #     # 边缘细胞是否需要参与退火 Do marginal cells need to participate in annealing
-        #     if not cb.cell1.ok or not cb.cell2.ok or not cb.cell3.ok:
-        #         edge_count += 1
-        #         continue
-        if edge_judge:
-            # 细胞块边缘是否需要参与退火
-            # if not cb.cell1.layer == 1 or not cb.cell2.layer == 1 or not cb.cell3.layer == 1:
-            # if cb.cell1.layer + cb.cell2.layer + cb.cell3.layer == 2:
-            if (cb.cell1.layer == 1 and cb.cell2.layer == 1) \
-                    or (cb.cell1.layer == 1 and cb.cell3.layer == 1) \
-                    or (cb.cell2.layer == 1 and cb.cell3.layer == 1):
-
-                # now_count -= 1
-                edge_move_point = get_edge_move_point(cb, annealing_rate, cells)
-                if edge_move_point > 0:
-                    # print(edge_move_point)
-                    edge_count += 1  # TODO::暂时不考虑这个变量
-                    continue
-                # print(edge_move_point)
-                # print("ppp", ppp)
-                # if ppp in cb.cell1.points:
-                #     print("true")
-                # else:
-                #     print("false")
-                # continue  # todo::需要再修改
-
-        # print(10)
-        point_g = cb.getTriCentreOfGravity()
-
-
-        '''
-        根据角度判断标准，循环设置退火速率（已弃用）
-        '''
-        # annealing_rate_list = [0.1, 0.06, 0.03, 0.02, 0.01]
-        # move_flag = False
-        # while True:
-        #     move_point = get_point_of_destination(cb.cell1.points[cb.index1], point_g, annealing_rate)
-        #     flag_index = judge_if_annealing(cb, move_point)
-        #     if flag_index == 0:  # 如果可以移动，则直接退出循环
-        #         move_flag = True
-        #         break
-        #     if annealing_rate == 0.01:  # 如果循环到最后也不可移动，则返回False
-        #         if flag_index == -1:
-        #             best_count += 1
-        #         elif flag_index == -2:
-        #             need_not_count += 1
-        #         elif flag_index == -3:
-        #             judge_180_count += 1
-        #         elif flag_index == -4:
-        #             judge_inner_angle_count += 1
-        #         move_flag = False
-        #         break
-        #
-        #     annealing_rate = annealing_rate_list[annealing_rate_list.index(annealing_rate)+1]  # 改变退火速率，重新判断
-
-        '''
-        根据用户输入设置退火速率
-        '''
-        move_flag = False
-        move_point = get_point_of_destination(cb.cell1.points[cb.index1], point_g, annealing_rate)
-        flag_index = judge_if_annealing(cb, move_point)
-        if flag_index == 0:  # 如果可以移动，则返回true
-            move_flag = True
-        elif flag_index == -1:
-            best_count += 1
-        elif flag_index == -2:
-            need_not_count += 1
-        elif flag_index == -3:
-            judge_180_count += 1
-        elif flag_index == -4:
-            judge_inner_angle_count += 1
-
-
-
-        if not move_flag:  # 经判断，该点无法退火
-            continue
-        # print(annealing_rate)
-        # 移动 move
-        cb.cell1.points[cb.index1] = [move_point.x, move_point.y]
-        cb.cell2.points[cb.index2] = [move_point.x, move_point.y]
-        cb.cell3.points[cb.index3] = [move_point.x, move_point.y]
-        cb.cell1.setVertex()
-        cb.cell2.setVertex()
-        cb.cell3.setVertex()
-
+    # 计算实际退火细胞块总数（正确的方法）
+    actual_annealed_cell_blocks = marginal_annealing_points + inner_annealing_points
     # 输出相关信息 Output relevant information
     print("一次退火完成，本次退火相关信息如下：")
-    print("应退火细胞块总数：{0}，实际退火细胞块总数：{1}".format(now_count,
-                                            now_count - edge_count - need_not_count - best_count - judge_180_count - judge_inner_angle_count))
+    print("应退火细胞块总数：{0}，实际退火细胞块总数：{1},实际退火的边缘顶点{2},实际退火的内部顶点{3}".format(
+        now_count,
+        actual_annealed_cell_blocks,
+        marginal_annealing_points,
+        inner_annealing_points
+    ))
 
-    # 返回实际退火的细胞块总数 Returns the total number of cell blocks actually annealed
-    return now_count - edge_count - need_not_count - best_count - judge_180_count - judge_inner_angle_count
+    # 与 AnnealingGUI.Annealer 约定：元组第二项为内外退火顶点数，供统计面板等使用
+    annealing_count = now_count - marginal_count - need_not_count - best_count - judge_180_count - judge_inner_angle_count
+    stats = {
+        'marginal_points': marginal_annealing_points,
+        'inner_points': inner_annealing_points,
+    }
+    return annealing_count, stats

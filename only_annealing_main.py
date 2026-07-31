@@ -592,22 +592,22 @@ class AnnealingGUI:
             self._reg_font(val, 14)
             return lf, val
 
-        self.stats_group_internal, self.stats_value_internal = _make_group(
+        self.stats_group_inner, self.stats_value_inner = _make_group(
             _('inner_vertices_stat'))
-        self.stats_group_edge, self.stats_value_edge = _make_group(
-            _('edge_vertices_stat'))
+        self.stats_group_marginal, self.stats_value_marginal = _make_group(
+            _('marginal_points_stat'))
         self.stats_group_cells, self.stats_value_cells = _make_group(
             _('total_cells'))
 
         self._update_stats_panel()
 
-    def _update_stats_panel(self, internal_vertices_total=None,
-                            last_anneal_internal=None,
-                            edge_vertices_total=None,
-                            last_anneal_edge=None,
+    def _update_stats_panel(self, inner_points_total=None,
+                            last_anneal_inner=None,
+                            marginal_points_total=None,
+                            last_anneal_marginal=None,
                             cell_total=None):
         """更新统计面板"""
-        if not hasattr(self, 'stats_value_internal'):
+        if not hasattr(self, 'stats_value_inner'):
             return
 
         def _safe(val):
@@ -615,14 +615,14 @@ class AnnealingGUI:
                 return '--'
             return str(val)
 
-        self.stats_value_internal.config(
-            text=f"{_safe(internal_vertices_total)} / {_safe(last_anneal_internal)}")
-        self.stats_value_edge.config(
-            text=f"{_safe(edge_vertices_total)} / {_safe(last_anneal_edge)}")
+        self.stats_value_inner.config(
+            text=f"{_safe(inner_points_total)} / {_safe(last_anneal_inner)}")
+        self.stats_value_marginal.config(
+            text=f"{_safe(marginal_points_total)} / {_safe(last_anneal_marginal)}")
         self.stats_value_cells.config(
             text=_safe(cell_total))
 
-    def _vertex_internal_edge_totals(self):
+    def _vertex_inner_marginal_totals(self):
         """计算内部/边缘顶点数"""
         global cellData
         if cellData is None or not getattr(cellData, 'cells', None):
@@ -641,11 +641,11 @@ class AnnealingGUI:
             for cell in cellData.cells:
                 for pt in cell.points:
                     all_vertex_keys.add(_pt_key(pt))
-            edge_vertices = anneal_util.get_all_edge_vertices(cellData.cells)
-            edge_vertex_keys = {_pt_key(pt) for pt in edge_vertices}
-            edge_total = len(edge_vertex_keys)
-            internal_total = len(all_vertex_keys - edge_vertex_keys)
-            return internal_total, edge_total
+            marginal_points = anneal_util.get_all_marginal_points(cellData.cells)
+            marginal_point_keys = {_pt_key(pt) for pt in marginal_points}
+            marginal_total = len(marginal_point_keys)
+            inner_total = len(all_vertex_keys - marginal_point_keys)
+            return inner_total, marginal_total
         except Exception:
             return None, None
 
@@ -822,12 +822,12 @@ class AnnealingGUI:
             self._display()
 
             # 6. 更新统计
-            internal_total, edge_total = self._vertex_internal_edge_totals()
+            inner_total, marginal_total = self._vertex_inner_marginal_totals()
             self._update_stats_panel(
-                internal_vertices_total=internal_total,
-                last_anneal_internal=0,
-                edge_vertices_total=edge_total,
-                last_anneal_edge=0,
+                inner_points_total=inner_total,
+                last_anneal_inner=0,
+                marginal_points_total=marginal_total,
+                last_anneal_marginal=0,
                 cell_total=len(cellData.cells)
             )
 
@@ -876,12 +876,12 @@ class AnnealingGUI:
             annealer.annealing(cellData.cells)
             cellData.flush(isGrow=True)
 
-            internal_total, edge_total = self._vertex_internal_edge_totals()
+            inner_total, marginal_total = self._vertex_inner_marginal_totals()
             self._update_stats_panel(
-                internal_vertices_total=internal_total,
-                last_anneal_internal=int(getattr(annealer, 'internal_vertices', 0) or 0),
-                edge_vertices_total=edge_total,
-                last_anneal_edge=int(getattr(annealer, 'edge_vertices', 0) or 0),
+                inner_points_total=inner_total,
+                last_anneal_inner=int(getattr(annealer, 'inner_points', 0) or 0),
+                marginal_points_total=marginal_total,
+                last_anneal_marginal=int(getattr(annealer, 'marginal_points', 0) or 0),
                 cell_total=len(cellData.cells)
             )
             self._display()
@@ -934,7 +934,7 @@ class AnnealingGUI:
 
         try:
             for c in cellData.cells:
-                c.like_ellipse()
+                c.like_ellipse(1)
             cellData.list_line_of_cell()
             self._display(show_ellipse=True)
         except Exception as e:
@@ -950,7 +950,7 @@ class AnnealingGUI:
         try:
             cellData.list_line_of_cell()
             for c in cellData.cells:
-                c.like_ellipse()
+                c.like_ellipse(1)
         except Exception as e:
             messagebox.showerror(_('error'), _('error_export_prepare').format(error=str(e)), parent=self.root)
             return
@@ -1073,10 +1073,10 @@ class AnnealingGUI:
             self.undo_btn.config(text=_('undo'))
         if hasattr(self, 'stats_title'):
             self.stats_title.config(text=_('statistics'))
-        if hasattr(self, 'stats_group_internal'):
-            self.stats_group_internal.config(text=_('inner_vertices_stat'))
-        if hasattr(self, 'stats_group_edge'):
-            self.stats_group_edge.config(text=_('edge_vertices_stat'))
+        if hasattr(self, 'stats_group_inner'):
+            self.stats_group_inner.config(text=_('inner_vertices_stat'))
+        if hasattr(self, 'stats_group_marginal'):
+            self.stats_group_marginal.config(text=_('marginal_points_stat'))
         if hasattr(self, 'stats_group_cells'):
             self.stats_group_cells.config(text=_('total_cells'))
         if hasattr(self, '_lang_label_zh') and hasattr(self, '_lang_label_en'):
@@ -1132,12 +1132,12 @@ class AnnealingGUI:
             globals()['cellData'] = _CD(cells)
             cellData.flush(isGrow=True)
             self._display()
-            internal_total, edge_total = self._vertex_internal_edge_totals()
+            inner_total, marginal_total = self._vertex_inner_marginal_totals()
             self._update_stats_panel(
-                internal_vertices_total=internal_total,
-                last_anneal_internal=0,
-                edge_vertices_total=edge_total,
-                last_anneal_edge=0,
+                inner_points_total=inner_total,
+                last_anneal_inner=0,
+                marginal_points_total=marginal_total,
+                last_anneal_marginal=0,
                 cell_total=len(cellData.cells)
             )
             return True
@@ -1227,7 +1227,7 @@ class AnnealingGUI:
             # 椭圆
             if show_ellipse:
                 try:
-                    ellipse_data, add_points = cell.like_ellipse()
+                    ellipse_data, add_points = cell.like_ellipse(1)
                     x, y = get_ellipse(
                         ellipse_data['cp'].x, ellipse_data['cp'].y,
                         ellipse_data['a'], ellipse_data['b'],

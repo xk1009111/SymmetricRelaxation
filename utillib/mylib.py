@@ -6,7 +6,6 @@ Created on Sun May 24 17:49:22 2020
 """
 from decimal import Decimal
 import math
-import numpy as np
 from utillib import fittinglib
 
 
@@ -78,9 +77,10 @@ class Line_in_Polar_Coordinate_System:
 class Cell:
     no = 0
     cell_no = 0
-    ok = True # 是否不在边缘 Not on the edge
+    ok = True # 是否最外两层 Is it the outermost two layers
     layer = 0 # 层数，默认为0 The number of layers is 0 by default
     cell_tier = 0# 细胞层级标记 Cell tier mark Mc=1,Nc-MC=2，第三层 Third_tier=3 Ic=4,未分类 Unclassified
+    edge_line_index = ''
     edge_line_index = ''  # 边缘细胞壁两端点索引，如果该细胞为边缘细胞，则会存储边缘细胞壁的数据
     points = []
     center_point = Point(0, 0)
@@ -92,7 +92,7 @@ class Cell:
 
     # 拟合数据
     data = None
-    # 拟合辅助点（保留字段，当前实现下始终为空列表）
+    # 拟合辅助点
     add_points = None
 
     def __init__(self,points):
@@ -170,9 +170,14 @@ class Cell:
         self.setArea()
 
 
-    # 椭圆拟合
-    def like_ellipse(self):
+    # 椭圆拟合部分
+    # value 为阈值
+    def like_ellipse(self,
+                     rotate_angle):  # 椭圆拟合 ，传入数据为插值法旋转角度 Ellipse fitting, the input data is interpolation rotation angle
         points = self.points[:]  # 获取细胞点集合 Get cell point collection
+        nn = len(points)  # 细胞边数
+        # Since the starting point and the ending point coincide in the cell class, the number of vertices existing
+        # in the cell class should be the number of cell edges minus the length of the point set
         can_shu = fittinglib.fitting(points, self.center_point, self.area)
 
         data = self.make_final_ellipse(can_shu)
@@ -189,15 +194,14 @@ class Cell:
         return data, add_points
 
     def make_final_ellipse(self, can_shu):
-        # fitting() 现已统一返回几何参数 [cx, cy, a, b, theta]
-        # fitting() now uniformly returns geometric parameters [cx, cy, a, b, theta]
-        geo = np.asarray(can_shu).flatten()
         ellipse_data = {}  # 声明存放椭圆参数的变量 Declare the variable that holds the ellipse parameters
-        cp = Point(float(geo[0]), float(geo[1]))  # 直接取中心点坐标 Directly take center point coordinates
+        cp = fittinglib.find_center_point(can_shu)  # 获取拟合椭圆的中心点 Get the center point of fitting ellipse
+        cp = Point(cp[0], cp[1])  # 同上 ditto
         ellipse_data['cp'] = cp  # 设置椭圆中心点 Set ellipse center point
-        ellipse_data['a'] = float(geo[2])  # 设置椭圆半轴 a（是否为长半轴取决于上游拟合结果）Set ellipse semi-axis a
-        ellipse_data['b'] = float(geo[3])  # 设置椭圆半轴 b Set ellipse semi-axis b
-        ellipse_data['angle'] = float(geo[4])  # 设置椭圆与水平轴倾斜角数据 Set the data of inclination angle between ellipse and horizontal axis
+        ellipse_data['a'] = fittinglib.find_a(can_shu)  # 设置椭圆长半轴数据 Set ellipse long half axis data
+        ellipse_data['b'] = fittinglib.find_b(can_shu)  # 设置椭圆短半轴数据 Set ellipse minor axis data
+        ellipse_data['angle'] = fittinglib.find_angle(
+            can_shu)  # 设置椭圆与水平轴倾斜角数据 Set the data of inclination angle between ellipse and horizontal axis
 
         return ellipse_data  # 返回所有椭圆数据信息 Returns all ellipse data information
 
