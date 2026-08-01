@@ -12,7 +12,7 @@ Based on:
 - Xu K., Weng L., Wang Z., Lian Y., Huang B. (2026). *A symmetric relaxation method for entire two-dimensional cellular networks and its implications*. (arXiv: XuSR20260616)
 - Xu K. (2021). *A geometry-based relaxation algorithm for equilibrating a trivalent polygonal network in two dimensions and its implications*. Philosophical Magazine, 101(14), 1632-1653.
 
----
+***
 
 ## Features
 
@@ -29,23 +29,27 @@ Equilibrate both inner and marginal vertices via geometric symmetry:
 - **Configurable** — Relaxation factor (vertex movement speed), edge vertex participation toggle, and interior angle square-sum guard.
 
 ### Ellipse Fitting
+
 - **R-LMG** (via `conicfit`) — High-precision geometric fitting, preferred for triangles and quadrilaterals.
-- **Algebraic Least Squares** (numpy SVD) — Fast fitting for polygons with 5+ sides.
-- Automatic fallback between methods based on fitting quality (area ratio ≤ 5).
+- **Algebraic Least Squares** (numpy SVD) — Fast fitting, preferred for polygons with 5+ sides.
+- The area ratio of the ellipse to the n-gon must be between 1 and 3. If the preferred method fails, fit using algebraic least squares on real points + mirror points (2n total); if that fails, fit using R-LMG on real points + mirror points (2n total); if that still fails, fall back to the minimum bounding rectangle (MBR) on real points + mirror points (2n total).
 
 ### Data Export
+
 Export results to Excel (`.xlsx`):
+
 - **Ellipse & Cell perimeter and area** — Center, semi-axes, angle, cell perimeter, cell area, cell layer info (outermost = layer 1, incrementing inward).
 - **Edge Angle Data** — Interior angles, adjacent edge lengths per vertex.
 - **ME/MA Statistics** — Marginal edge lengths and marginal angles for boundary cells.
 
 ### Visualization
+
 - Real-time cell network display with color-coded layers.
 - Display optimal rays with centroid-vertex connections and triangles formed by three rays at each vertex.
 - Ellipse overlay for fitted cells.
 - Image export to EPS (vector) and PNG formats.
 
----
+***
 
 ## Requirements
 
@@ -54,7 +58,7 @@ Export results to Excel (`.xlsx`):
 - **R** language environment (for R-LMG ellipse fitting via `rpy2`), optional but recommended
 - R packages: `conicfit`, `sp`, `shotGroups`
 
----
+***
 
 ## Installation
 
@@ -113,7 +117,7 @@ pyinstaller --onefile --windowed --name "CellAnnealing" ^
 
 > After building, place `R_Dist/` next to the EXE to enable R-LMG fitting.
 
----
+***
 
 ## Project Structure
 
@@ -150,7 +154,7 @@ only_annealing/
     └── layerMarker.py          # Cell layer marking
 ```
 
----
+***
 
 ## R Environment
 
@@ -166,7 +170,7 @@ If no R environment is found, ellipse fitting falls back to pure Python (numpy/s
 
 > **Note:** `R_Dist/` is excluded from git (see `.gitignore`). Run `setup.bat` after cloning to configure R, or copy `R_Dist/` from a complete distribution.
 
----
+***
 
 ## Usage
 
@@ -184,7 +188,7 @@ The GUI provides:
 5. **Data Export** — Save geometric and topological parameters of all cells to three Excel files.
 6. **Image Export** — Save current view as EPS or PNG via the matplotlib toolbar.
 
----
+***
 
 ## Citation
 
@@ -200,13 +204,13 @@ Xu K. (2021). A geometry-based relaxation algorithm for equilibrating a trivalen
 Philosophical Magazine, 101(14), 1632-1653.
 ```
 
----
+***
 
 ## License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
----
+***
 
 ## Contributors
 
@@ -217,7 +221,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 - **Guowei Shi (史国威)** — Implemented the initial foundational code and original simulated annealing prototype.
 - **Lifan Weng (翁力凡), Zihan Wang (王子涵), Yuyang Lian (连钰洋), Bin Huang (黄斌)** — Conducted subsequent code refactoring, computational performance optimization, GUI functional improvement and supplementary internationalization support.
 
----
+***
 
 ## Contact
 

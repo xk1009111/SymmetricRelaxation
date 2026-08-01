@@ -5,23 +5,6 @@ k_R = 0.1
 k_D = 1.0
 ##正式的代码修改
 # from cell.annealing_statistics import annealing_statistics
-def n_rotate(angle, x, y, cx, cy):
-    """
-    将点 (x, y) 绕点 (cx, cy) 逆时针旋转 angle 弧度
-    :param angle: 旋转角度（弧度）
-    :param x: 原始点 x 坐标
-    :param y: 原始点 y 坐标
-    :param cx: 旋转中心 x 坐标
-    :param cy: 旋转中心 y 坐标
-    :return: 旋转后的 (x, y) 坐标
-    """
-    cos_a = math.cos(angle)
-    sin_a = math.sin(angle)
-    dx = x - cx
-    dy = y - cy
-    new_x = dx * cos_a - dy * sin_a + cx
-    new_y = dx * sin_a + dy * cos_a + cy
-    return new_x, new_y
 
 """
     根据三个点获取角度，第二个点作为角中心点。（依据公式进行计算）
@@ -82,10 +65,6 @@ def get_angle_by_three_point(p_list):
 """
 
 
-def get_distance_point_point_last(p1, p2):
-    distance = math.sqrt((p1.x - p2.x) * (p1.x - p2.x) +
-                         (p1.y - p2.y) * (p1.y - p2.y))
-    return distance
 
 def get_distance_point_point(p1, p2):
     """
@@ -146,13 +125,6 @@ def get_distance_point_point_by_list(p1, p2):
     :return: 距离 distance
 """
 
-def get_distance_point_line(point, line):
-    a = line.p2.y - line.p1.y
-    b = line.p1.x - line.p2.x
-##c是两点叉乘
-    c = line.p2.x * line.p1.y - line.p1.x * line.p2.y
-    dis = (math.fabs(a * point.x + b * point.y + c)) / (math.pow(a * a + b * b, 0.5))
-    return dis
 
 
 """
@@ -255,17 +227,6 @@ def get_pre_best_lines(cell, max_distence, delta=0):
 """
 
 ##求取当前角度和理论最优线的角度差
-def get_sum_angle(actual_lines, pre_best_lines):
-    sum = 0
-    for i in range(0, len(actual_lines)):
-        cita1 = pre_best_lines[i].cita
-        cita2 = actual_lines[i].cita
-        diffrence = cita1 - cita2
-        if diffrence > math.pi:
-            diffrence = 2 * math.pi - diffrence
-        sum = sum + (diffrence * (diffrence))
-    # print(sum)
-    return sum
 
 
 '''
@@ -402,8 +363,6 @@ def get_intersection_cell_blocks(cells):
     return intersection_cell_blocks
 
 
-
-
 #统计内部和边缘顶点个数，并保存，保存形式为两个列表，分别统计边缘和内部顶点的个数并返回这两个列表
 # def get_cell_block_points_index(cells):
 #     edge_points_index = []
@@ -418,7 +377,6 @@ def get_intersection_cell_blocks(cells):
 #             else:
 #                 internal_points_index.append(point_idx)
 #     return edge_points_index, internal_points_index
-
 
 
 '''
@@ -519,27 +477,6 @@ def get_triangle_by_lines(lines):
     :param intersection_cell_blocks: 退火细胞块列表 Annealed cell block list
     :return: 排序后的退火细胞块列表 Sorted annealing cell block list
 '''
-def sort_intersection_cell_blocks(intersection_cell_blocks):
-    dict_cbs = []
-    for cb in intersection_cell_blocks:
-        dict_cb = {}
-        dict_cb['cb'] = cb
-        dict_cb['max_angle'] = get_max_angle(cb)
-        dict_cbs.append(dict_cb)
-    dict_cbs = sorted(dict_cbs, key=lambda e: e.__getitem__('max_angle'), reverse=True)
-
-    return dict_cbs
-def get_cell_block_type(cells):
-    """
-    判断细胞块类型
-
-    :param cell_block: 细胞块对象
-    :return: 细胞块类型，"internal" 或 "edge"
-    """
-    if cells.layer == 1:  # 边缘细胞
-        return "edge"
-    else:  # 内部细胞
-        return "internal"
 '''新排序算法，对退火细胞块，按照距离退火目标点距离进行升序排列'''
 # def sort_cells_by_displacement_test02(cells):
 #     """
@@ -607,70 +544,8 @@ def get_cell_block_type(cells):
 ##sort_cells_by_annealing_distance_des
 ##sort_cells_by_distance的辅助函数
 
-def is_edge_cell_block(cb):
-    """判断细胞块是否为边缘细胞块"""
-    edge_count = 0
-    if hasattr(cb.cell1, 'layer') and cb.cell1.layer != 1: edge_count += 1
-    if hasattr(cb.cell2, 'layer') and cb.cell2.layer != 1: edge_count += 1
-    if hasattr(cb.cell3, 'layer') and cb.cell3.layer != 1: edge_count += 1
-
-    return edge_count > 0
-
-def get_cell_block_type(cb):
-    """获取细胞块的具体类型"""
-    edge_count = 0
-    if hasattr(cb.cell1, 'layer') and cb.cell1.layer != 1: edge_count += 1
-    if hasattr(cb.cell2, 'layer') and cb.cell2.layer != 1: edge_count += 1
-    if hasattr(cb.cell3, 'layer') and cb.cell3.layer != 1: edge_count += 1
-
-    if edge_count == 0:
-        return "internal"
-    elif edge_count == 1:
-        return "edge_single"
-    elif edge_count == 2:
-        return "edge_double"
-    else:
-        return "edge_triple"
 
 
-def sort_cells_by_distance(intersection_cell_blocks, cells):
-    """
-    计算每个交汇块当前顶点到理想目标点的距离 D，并按 D 降序排序
-    - 内部细胞目标点：三角形重心
-    - 边缘细胞目标点：使两个边缘角相等的点
-    返回包含距离、类型标记与当前/目标点的列表
-    """
-    cell_distance_info = []
-
-    for idx, cb in enumerate(intersection_cell_blocks):
-        # 1. 获取当前顶点位置
-        current_point = cb.cell1.points[cb.index1]
-
-        # 2. 根据细胞类型计算理想目标点
-        if is_edge_cell_block(cb):
-            target_point = calculate_ideal_target_point(cb, cells)  # 边缘细胞目标点
-        else:
-            target_point = cb.getTriCentreOfGravity()  # 内部细胞目标点（三角形重心）
-
-        # 3. 计算退火距离（当前点到目标点的欧氏距离）
-
-        annealing_distance = get_distance_point_point(current_point, target_point)
-        #print("target")
-        # 4. 记录细胞块信息和距离
-        cell_info = {
-            'original_index': idx,  # 原始索引
-            'cell_block': cb,
-            'annealing_distance': annealing_distance,
-            'current_point': current_point,
-            'target_point': target_point,
-            'is_edge': is_edge_cell_block(cb)
-        }
-
-        cell_distance_info.append(cell_info)
-
-    # 5. 按照退火距离降序排列（距离大的优先）
-    sorted_cell_info = sorted(cell_distance_info, key=lambda x: x['annealing_distance'], reverse=True)
-    return sorted_cell_info
 
 
 
@@ -682,19 +557,6 @@ def sort_cells_by_distance(intersection_cell_blocks, cells):
 '''
 
 
-def get_max_angle(cb):
-    a1 = get_angle_by_three_point([cb.cell1.points[cb.index1 - 1], cb.cell1.points[cb.index1],
-                                   cb.cell1.points[(cb.index1 + 1) % len(cb.cell1.points)]])
-    a2 = get_angle_by_three_point([cb.cell2.points[cb.index2 - 1], cb.cell2.points[cb.index2],
-                                   cb.cell2.points[(cb.index2 + 1) % len(cb.cell2.points)]])
-    a3 = get_angle_by_three_point([cb.cell3.points[cb.index3 - 1], cb.cell3.points[cb.index3],
-                                   cb.cell3.points[(cb.index3 + 1) % len(cb.cell3.points)]])
-    max_a = a1
-    if a2 > max_a:
-        max_a = a2
-    if a3 > max_a:
-        max_a = a3
-    return max_a
 
 
 '''
@@ -965,39 +827,6 @@ def is_cell_convex_after_move(cell, idx, candidate_point):
 '''
 
 
-def get_annealing_rate(cb):
-    len_points1 = len(cb.cell1.points)
-    len_points2 = len(cb.cell2.points)
-    len_points3 = len(cb.cell3.points)
-
-    angle1 = get_angle_by_three_point([cb.cell1.points[(cb.index1 - 1)], cb.cell1.points[(cb.index1)],
-                                       cb.cell1.points[(cb.index1 + 1) % len_points1]])
-    angle2 = get_angle_by_three_point([cb.cell2.points[(cb.index2 - 1)], cb.cell2.points[(cb.index2)],
-                                       cb.cell2.points[(cb.index2 + 1) % len_points2]])
-    angle3 = get_angle_by_three_point([cb.cell3.points[(cb.index3 - 1)], cb.cell3.points[(cb.index3)],
-                                       cb.cell3.points[(cb.index3 + 1) % len_points3]])
-
-    max_angle = angle1
-    if max_angle < angle2:
-        max_angle = angle2
-    if max_angle < angle3:
-        max_angle = angle3
-
-    annealing_rate = 0.1
-    if max_angle > math.pi*17/18: #  大于170度
-        annealing_rate = 0.1
-    elif max_angle > math.pi*8/9: #  大于160度
-        annealing_rate = 0.06
-    elif max_angle > math.pi*15/18: #  大于150度
-        annealing_rate = 0.03
-    elif max_angle > math.pi * 14 / 18:  # 大于140度
-        annealing_rate = 0.02
-    # elif max_angle > math.pi * 13 / 18:  # 大于140度
-    #     annealing_rate = 0.01
-    else:  # 小于140度 大于120度
-        annealing_rate = 0.01
-    # print(annealing_rate)
-    return annealing_rate
 
 
 '''
@@ -1007,29 +836,6 @@ def get_annealing_rate(cb):
 '''
 
 
-def get_marginal_annealing_rate(p_a, p_b, p_v, p_o):
-    # print("---5.1")
-    # print([p_a, p_v, p_o])
-    angle1 = get_angle_by_three_point([p_a, p_v, p_o])
-    angle2 = get_angle_by_three_point([p_b, p_v, p_o])
-    # print("---5.2")
-    dif_angle = math.fabs(angle1 - angle2)
-    # print("---5.3")
-    annealing_rate = 0.2
-    if dif_angle > math.pi*15/18:  #  大于150度
-        annealing_rate = 0.2
-    elif dif_angle > math.pi*12/18:  #  大于120度
-        annealing_rate = 0.1
-    elif dif_angle > math.pi*9/18:  #  大于90度
-        annealing_rate = 0.06
-    elif dif_angle > math.pi * 6 / 18:  # 大于60度
-        annealing_rate = 0.03
-    elif dif_angle > math.pi * 3 / 18:  # 大于30度
-        annealing_rate = 0.02
-    else:  # 小于140度 大于120度
-        annealing_rate = 0.01
-    # print("---5.6")
-    return annealing_rate
 
 
 '''
@@ -1055,11 +861,6 @@ def judge_if_annealing(cb, move_point):
     if is_point_in_triangle(cb.cell1.points[cb.index1], cb.triangle):
         return -1
 
-#如果移动点还在原地，则无需移动/如果移动后，会使细胞不满足凸多边形性质，则不移动 接收不到返回值
-    # 如果移动点还在原地，则无需移动 If the moving point is still in place, there is no need to move
-    if [move_point.x, move_point.y] in cb.cell1.points:
-        return -2
-
     # 如果移动后，会使细胞不满足凸多边形性质，则不移动
     # If the cell does not satisfy the convex polygon property after moving, it will not move
     if judge_by_intersection_cell_blocks(cb, move_point):
@@ -1075,48 +876,13 @@ def judge_if_annealing(cb, move_point):
 '''
     根据移动目标点，判断边缘是否应进行移动
     :param point_o: 退火细胞块中心点
-    :param edgecell1, edgecell2: 退火细胞块两个边缘细胞
+    :param marginalcell1, marginalcell2: 退火细胞块两个边缘细胞
     :param move_point: 移动目标点
     :return : 判断标记
 '''
 
 
 #保证移动之后边缘细胞还是稳定的
-def judge_edge_if_annealing(point_v, point_o, edgecell1, edgecell2, move_point):
-
-    judge_line_list = []  # 线段列表
-
-    # 判断两个边缘细胞的位置  判断后  1 为左  2为右
-    if edgecell2.points.index(point_v)-edgecell2.points.index(point_o) == 1:
-        tmpcell = edgecell1
-        edgecell1 = edgecell2
-        edgecell2 = tmpcell
-
-    # 计算六条线段的方程，存入线段列表
-    len_cell1 = len(edgecell1.points)
-    len_cell2 = len(edgecell2.points)
-    line1 = Line(point_o, edgecell1.points[edgecell1.points.index(point_o) - 1])
-    judge_line_list.append(line1)
-    line2 = Line(point_o, edgecell2.points[(edgecell2.points.index(point_o) + 1) % len_cell2])
-    judge_line_list.append(line2)
-
-    line3 = Line(point_o, edgecell1.points[(edgecell1.points.index(point_o) + 2) % len_cell1])
-    judge_line_list.append(line3)
-    line4 = Line(point_o, edgecell2.points[edgecell2.points.index(point_o) - 2])
-    judge_line_list.append(line4)
-
-    line5 = Line(edgecell1.points[(edgecell1.points.index(point_o) + 2) % len_cell1], edgecell1.points[(edgecell1.points.index(point_o) + 3) % len_cell1])
-    judge_line_list.append(line5)
-    line6 = Line(edgecell2.points[edgecell2.points.index(point_o) - 2], edgecell2.points[edgecell2.points.index(point_o) - 3])
-    judge_line_list.append(line6)
-
-    # 循环判断移动前后两点是否处在六条线段所围成的安全区内
-    for l in judge_line_list:
-        flag = (l.getA() * point_v[0] + l.getB() * point_v[1] + l.getC()) * (l.getA() * move_point[0] + l.getB() * move_point[1] + l.getC())
-        if flag <= 0 or math.fabs(flag) < 1e-9:
-            return -1
-
-    return 1
 
 
 '''
@@ -1130,18 +896,6 @@ def judge_edge_if_annealing(point_v, point_o, edgecell1, edgecell2, move_point):
 '''
 
 
-def get_point_from_line_and_2_point(x1, y1, line, p1, p2):
-    x2 = line.getX() + x1
-    y2 = line.getY() + y1
-    line_A = y2 - y1
-    line_B = x1 - x2
-    line_C = x2 * y1 - x1 * y2
-    if (line_A * p1[0] + line_B * p1[1] + line_C) * (line_A * p2[0] + line_B * p2[1] + line_C) > 0:  # 没有交点
-        return None
-    else:
-        l1 = Line(Point(x1, y1), Point(x2, y2))
-        l2 = Line(Point(p1[0], p1[1]), Point(p2[0], p2[1]))
-        return get_crossover_point(l1, l2)
 
 
 '''
@@ -1151,1008 +905,16 @@ def get_point_from_line_and_2_point(x1, y1, line, p1, p2):
 '''
 
 
-def get_marginal_move_point_last(cb, annealing_rate, cells):
-    ##判断是否三个细胞都是边缘细胞，需要寻找两边一内的细胞块组合
-    # print(---0)
-    # print(cb)
-    # print("cb.cell1:", cb.cell1.points)
-    # print("cb.cell2:", cb.cell2.points)
-    # print("cb.cell3:", cb.cell3.points)
-    # print("cb.index1:", cb.index1)
-    # print("cb.index2:", cb.index2)
-    # print("cb.index3:", cb.index3)
-    # print(cb.cell1.points[cb.index1])
-    point_o = cb.cell1.points[cb.index1]
-    point_v = []
-    point_a = []
-    point_b = []
-    point_move_v = []
-    edge_cell1 = object
-    edge_cell2 = object
-    # print(2)
-    if cb.cell1.layer != 1:
-        edge_cell1 = cb.cell2
-        edge_cell2 = cb.cell3
-    elif cb.cell2.layer != 1:
-        edge_cell1 = cb.cell1
-        edge_cell2 = cb.cell3
-    elif cb.cell3.layer != 1:
-        edge_cell1 = cb.cell1
-        edge_cell2 = cb.cell2
-    else:  # 如果退火细胞块全是边缘细胞，则不进行退火操作
-        # print(cb)
-        # print(cb.cell1.layer)
-        # print(cb.cell2.layer)
-        # print(cb.cell3.layer)
-        return 0
-    # print(---1)
-    # print("edge_cell1.points", edge_cell1.points)
-    # print("edge_cell2.points", edge_cell2.points)
-
-    ##寻找与边缘细胞相交但不与内部细胞相交的点
-    for p in edge_cell1.points:
-        if p in edge_cell2.points and p != point_o:
-            # print(---1.5)
-            # print(p)
-            # print(point_o)
-            # print(p != point_o)
-            point_v = p
-    if len(point_v) == 0:
-        print("这里出现了错误：point_v为空")
-    if len(point_o) == 0:
-        print("这里出现了错误：point_o为空")
-
-
-    # 验证该细胞块是否是边缘细胞块
-    flag_count = 0
-    for c in cells:
-        for p in c.points:
-            if p == point_v:
-                flag_count = flag_count + 1
-    if flag_count > 2:
-        return -1
-    # print(---2)
-    # print(edge_cell1.points)
-    # print("point_o:", point_o)
-    #
-    # print("point_v:", point_v)
-
-    # print(edge_cell1.points.index(point_v))
-    # print(edge_cell1.points.index(point_o))
-
-
-    if edge_cell1.points.index(point_v)-edge_cell1.points.index(point_o) > 0 and edge_cell1.points.index(point_v)+1 < len(edge_cell1.points):
-        # print(---2.1)
-        if edge_cell1.points.index(point_v)+1 >= len(edge_cell1.points):
-            # print(---2.2)
-            point_a = edge_cell1.points[0]
-        else:
-            # print(---2.3)
-            point_a = edge_cell1.points[edge_cell1.points.index(point_v)+1]
-        point_b = edge_cell2.points[edge_cell2.points.index(point_v)-1]
-    else:
-        # print(---2.4)
-        if edge_cell2.points.index(point_v)+1 >= len(edge_cell2.points):
-            # print(---2.5)
-            point_b = edge_cell2.points[0]
-        else:
-            # print(---2.6)
-            point_b = edge_cell2.points[edge_cell2.points.index(point_v)+1]
-        point_a = edge_cell1.points[edge_cell1.points.index(point_v)-1]
-    # print(---3)
-    # print("point_a:", point_a)
-    # print("point_a==point_v:", point_a == point_v)
-    # d_oa = get_distance_point_point_by_list(point_a, point_o)
-    # d_ob = get_distance_point_point_by_list(point_a, point_o)
-    # d_ov = get_distance_point_point_by_list(point_a, point_o)
-    #
-    # if d_ob > d_oa and d_ov > d_oa:  # 第一种情况
-    #     angle_aov = (get_angle_by_three_point([point_a, point_o, point_b]) - math.acos(d_oa / d_ob)) / 2
-
-    pre_best_lines_a = edge_cell1.pre_best_lines[edge_cell1.points.index(point_v)]
-    pre_best_lines_b = edge_cell2.pre_best_lines[edge_cell2.points.index(point_v)]
-
-    flag = 0
-    p_av_o1v = get_point_from_line_and_2_point(edge_cell1.vx, edge_cell1.vy, pre_best_lines_a, point_a, point_v)
-    if p_av_o1v is not None:
-        flag += 1
-
-    p_av_o2v = get_point_from_line_and_2_point(edge_cell2.vx, edge_cell2.vy, pre_best_lines_b, point_a, point_v)
-    if p_av_o2v is not None:
-        flag += 2
-
-    p_bv_o1v = get_point_from_line_and_2_point(edge_cell1.vx, edge_cell1.vy, pre_best_lines_a, point_b, point_v)
-    if p_bv_o1v is not None:
-        flag -= 1
-
-    p_bv_o2v = get_point_from_line_and_2_point(edge_cell2.vx, edge_cell2.vy, pre_best_lines_b, point_b, point_v)
-    if p_bv_o2v is not None:
-        flag -= 2
-    # print(---4)
-    x1 = pre_best_lines_a.getX() + edge_cell1.vx
-    y1 = pre_best_lines_a.getY() + edge_cell1.vy
-
-    x2 = pre_best_lines_b.getX() + edge_cell2.vx
-    y2 = pre_best_lines_b.getY() + edge_cell2.vy
-    # print(---4.3)
-    l1 = Line(Point(x1, y1), Point(edge_cell1.vx, edge_cell1.vy))
-    l2 = Line(Point(x2, y2), Point(edge_cell2.vx, edge_cell2.vy))
-
-    # print(---4.4)
-    p_o1v_o2v = get_crossover_point(l1, l2)
-    if p_o1v_o2v is None:
-        return 0
-
-    # print(---4.5)
-    # print("flag=", flag)
-
-    # Calculate the two edge angles
-    angle_avo = get_angle_by_three_point([point_a, point_v, point_o])
-    angle_bvo = get_angle_by_three_point([point_b, point_v, point_o])
-
-    # New logic: The target point is the midpoint of the edge that needs to be shortened.
-    # This provides a stable restoring force without causing rotation.
-    if angle_avo < angle_bvo:
-        # v-a edge is part of the smaller angle, so it's the one to shorten.
-        target_edge_point = point_a
-    else:
-        # v-b edge is part of the smaller angle, so it's the one to shorten.
-        target_edge_point = point_b
-
-    # The destination point is the midpoint of the edge to be shortened.
-    xg = (point_v[0] + target_edge_point[0]) / 2
-    yg = (point_v[1] + target_edge_point[1]) / 2
-
-
-
-    # print(---4.9)
-    point_move_v = [xg, yg]
-    # print(---5)
-    # print("point_move_v:", point_move_v)
-
-    # rate = get_marginal_annealing_rate(point_a, point_b, point_v, point_o)
-    rate = annealing_rate
-
-    # print("rate:", rate)
-    point_move_v_fin = get_point_of_destination(edge_cell1.points[edge_cell1.points.index(point_v)],
-                                                Point(point_move_v[0], point_move_v[1]), rate)
-    point_move_v_fin = [point_move_v_fin.x, point_move_v_fin.y]
-
-    # 角度安全判断，防止相关顶点内角超过180度
-    idx_v1 = edge_cell1.points.index(point_v)
-    idx_o1 = edge_cell1.points.index(point_o)
-    idx_v2 = edge_cell2.points.index(point_v)
-    idx_o2 = edge_cell2.points.index(point_o)
-    if not (is_vertex_angle_safe(edge_cell1, idx_v1, point_move_v_fin) and
-            is_vertex_angle_safe(edge_cell1, idx_o1, point_move_v_fin) and
-            is_vertex_angle_safe(edge_cell2, idx_v2, point_move_v_fin) and
-            is_vertex_angle_safe(edge_cell2, idx_o2, point_move_v_fin)):
-        return 0
-
-    # 180度判断及几何安全区判断
-    if judge_edge_if_annealing(point_v, point_o, edge_cell1, edge_cell2, point_move_v_fin) > 0:
-        edge_cell1.points[edge_cell1.points.index(point_v)] = point_move_v_fin
-        edge_cell2.points[edge_cell2.points.index(point_v)] = point_move_v_fin
-        return 1
-    else:
-        return 0
-def is_vertex_angle_safe_01(cell, index, candidate):
-    """
-    检查一次虚拟的顶点移动是否会导致细胞内角大于180度。
-    这会检查被移动顶点自身，以及其左右两个邻居顶点的角度。
-    """
-    # 创建一个临时点列表用于模拟移动
-    # 注意：需要确保 cell.points 列表中的元素支持 .copy() 方法
-    # 如果 cell.points 是 numpy 数组列表，这是可以的。
-    try:
-        temp_points = [p.copy() for p in cell.points]
-    except AttributeError:
-        # 如果点是元组或列表，则这样复制
-        temp_points = [list(p) for p in cell.points]
-
-    temp_points[index] = list(candidate)
-
-    l = len(temp_points)
-
-    # 循环检查三个关键角度：被移动的顶点(index)和它的左右邻居(index-1, index+1)
-    for i in range(-1, 2):
-        # 我们要检查的顶点的索引
-        vertex_index_to_check = (index + i + l) % l
-
-        # 组成这个角的三个点
-        p_prev = temp_points[(vertex_index_to_check - 1 + l) % l]
-        p_curr = temp_points[vertex_index_to_check]
-        p_next = temp_points[(vertex_index_to_check + 1) % l]
-
-        # 计算角度
-        angle = get_angle_by_three_point([p_prev, p_curr, p_next])
-
-        # 核心判断：如果任何一个角度大于或接近180度，则移动是不安全的
-        if angle >= math.pi/2:
-            return False
-
-    # 如果所有三个角都小于180度，则是安全的
-    return True
 #{"variant":"standard","title":"is_vertex_angle_safe_01","id":"90211"}
 #------------------------------------
-def is_vertex_angle_safe_04(cell, index, candidate):
-    """
-    扩展版角度安全性检查：
-    移动前检查该顶点是否导致：
-      - 自身角
-      - 左邻 / 右邻角（共3个直接角）
-      - 两个间接影响的角
-      - 一个次邻接角
-    共6个角是否超过 180°。
-    """
-
-    # 复制顶点列表并替换移动后的点
-    try:
-        temp = [p.copy() for p in cell.points]
-    except:
-        temp = [list(p) for p in cell.points]
-
-    temp[index] = list(candidate)
-    n = len(temp)
-
-    # 简化点访问
-    def P(i):
-        return temp[i % n]
-
-    # 计算三点角
-    def angle(i_prev, i_curr, i_next):
-        return get_angle_by_three_point([P(i_prev), P(i_curr), P(i_next)])
-
-    # -------------------------------
-    # A. 直接相关 3 个角
-    # -------------------------------
-    angle_self = angle(index - 1, index, index + 1)
-    angle_left = angle(index - 2, index - 1, index)
-    angle_right = angle(index, index + 1, index + 2)
-
-    # -------------------------------
-    # B. 间接影响的 2 个角
-    #    跨越一个点的角度
-    # -------------------------------
-    angle_cross1 = angle(index - 2, index - 1, index + 1)
-    angle_cross2 = angle(index - 1, index + 1, index + 2)
-
-    # -------------------------------
-    # C. 额外的一个次邻接角（第6个角）
-    #    使用 index-3 的方向
-    # -------------------------------
-    angle_second_neighbor = angle(index - 3, index - 2, index - 1)
-
-    # 打包所有 6 个角
-    angles = [
-        angle_self,
-        angle_left,
-        angle_right,
-        angle_cross1,
-        angle_cross2,
-        angle_second_neighbor
-    ]
-
-    # 检查是否有角 >=180 度
-    for a in angles:
-        if a >= math.pi - 1e-9:
-            return False
-
-    return True
 #-------------------------
 #~~~{"variant":"standard","title":"is_vertex_angle_safe_03（改进）","id":"70192"}
-def is_vertex_angle_safe_03(cell, index, candidate):
-    """
-    改进版角度安全检查：
-    - 对直接相关的3个角实行强约束（必须 < 180°）
-    - 对跨越角和次邻角放宽约束（允许一定范围）
-    """
-    # 替换 candidate
-    try:
-        temp = [p.copy() for p in cell.points]
-    except:
-        temp = [list(p) for p in cell.points]
-
-    temp[index] = list(candidate)
-    n = len(temp)
-
-    def P(i):
-        return temp[i % n]
-
-    def angle(i_prev, i_curr, i_next):
-        return get_angle_by_three_point([P(i_prev), P(i_curr), P(i_next)])
-
-    # ---------------------------------------
-    # A. 三个关键角（必须严格凸）
-    # ---------------------------------------
-    angle_self = angle(index-1, index, index+1)
-    angle_left = angle(index-2, index-1, index)
-    angle_right = angle(index, index+1, index+2)
-
-    critical_angles = [angle_self, angle_left, angle_right]
-
-    for a in critical_angles:
-        if a >= math.pi - 1e-9:    # 必须 < 180°
-            print("角度检查失败:必须 < 180°")
-            return False
-
-    # ---------------------------------------
-    # B. 两个跨越角（允许达到 200°）
-    # ---------------------------------------
-    angle_cross1 = angle(index-2, index-1, index+1)
-    angle_cross2 = angle(index-1, index+1, index+2)
-
-    cross_angles = [angle_cross1, angle_cross2]
-
-    for a in cross_angles:
-        if a > math.radians(200):   # 放宽
-            print("角度检查失败:允许达到 200°")
-            return False
-
-    # ---------------------------------------
-    # C. 次邻角（影响最弱，允许达到 210°）
-    # ---------------------------------------
-    angle_second_neighbor = angle(index-3, index-2, index-1)
-
-    if angle_second_neighbor > math.radians(210):
-        print("角度检查失败:次邻角（影响最弱，允许达到 210°）")
-        return False
-
-    return True
 
 
 #-------------------------
-def judge_by_intersection_cell_blocks_new(cb, move_point):
-    """
-    用于边缘退火的轻量级检查函数，复用原有 judge_by_intersection_cell_blocks 的逻辑，
-    但参数更简单，可直接被 get_marginal_move_point 调用。
-
-    回传：
-        True  = 可以移动
-        False = 不应退火（并打印原因）
-    """
-
-    # 要移动的目标点
-    new_x, new_y = move_point[0], move_point[1]
-
-    # ------------------- 检查 1：180° 凸性检查 -------------------
-    # 简化检验方式：对 cb 的三个细胞的对应角做一次"临时替换点"检查
-    involved = [
-        (cb.cell1, cb.index1),
-        (cb.cell2, cb.index2),
-        (cb.cell3, cb.index3),
-    ]
-
-    for cell, idx in involved:
-        # 复制 points
-        try:
-            temp = [p.copy() for p in cell.points]
-        except:
-            temp = [list(p) for p in cell.points]
-
-        temp[idx] = [new_x, new_y]
-        n = len(temp)
-
-        # 取三点用于计算角度
-        def P(i):
-            return temp[i % n]
-
-        # angle(prev, current, next)
-        ang = get_angle_by_three_point([P(idx - 1), P(idx), P(idx + 1)])
-
-        if ang >= math.pi - 1e-9:
-            print(f"[EdgeCheck-Stop] 失败原因：移动后会产生 >=180° 的角")
-            #print(f"[EdgeCheck-Stop] 失败原因：移动后会产生 >=180° 的角（cell.id={cell.id}, index={idx}）")
-            return False
-
-    # ------------------- 检查 2：移动是否会破坏三细胞一致性 -------------------
-    # 三个细胞必须共享并更新同一个点，因此检查 move_point 是否过大导致可能穿越
-    # 简单判断：若移动距离过大，则认为潜在风险
-    ori = cb.cell1.points[cb.index1]
-    move_dist = math.hypot(new_x - ori[0], new_y - ori[1])
-    if move_dist > 5.0:  # 阈值可调整
-        print(f"[EdgeCheck-Stop] 失败原因：移动过大，可能破坏几何框架，dist={move_dist:.4f}")
-        return False
-
-    # ------------------- 检查 3：通过即可 -------------------
-    return True
 #-------------------------
-def is_vertex_angle_safe_05(cell, index, candidate):
-    #利用get_marginal_move_point函数获取预退火移动点，判断预退火点与相邻几个点构成的角度是否满足要求<=180°的要求，优先只判断边缘顶点相邻的两个角度
-    return True
 
 #修改边缘细胞的退火方法为：每个边缘顶点对应两个边缘角，将当前边缘顶点V沿较小边缘角的边缘边移动到目的地点P，使得两个边缘角相等,
-def is_neighbors_angles_safe(cell, index_changed, candidate):
-    points = cell.points[:]
-    points[index_changed] = [candidate[0], candidate[1]]
-    l = len(points)
-    left = (index_changed - 1) % l
-    right = (index_changed + 1) % l
-    # 左邻角
-    p1 = points[(left - 1) % l]
-    p = points[left]
-    p2 = points[(left + 1) % l]
-    angle_left = get_angle_by_three_point([p1, p, p2])
-    # 右邻角
-    p1 = points[(right - 1) % l]
-    p = points[right]
-    p2 = points[(right + 1) % l]
-    angle_right = get_angle_by_three_point([p1, p, p2])
-    return (angle_left < math.pi - 1e-9) and (angle_right < math.pi - 1e-9)
-
-def get_marginal_move_point_last01_1127(cb, annealing_rate, cells):
-    """
-    新的边缘退火逻辑：
-    1. 设置三个列表存储原始顶点、移动后顶点、移动前角度
-    2. 遍历细胞块获取边缘顶点和角度
-    3. 比较角度差，决定是否进行退火移动
-    """
-    # 第一步：初始化三个列表
-    original_vertices = []      # 原始边缘顶点列表
-    moved_vertices = []         # 移动后的边缘顶点列表
-    pre_angles = []             # 移动前的角度列表（存储元组：(angle1, angle2)）
-
-    # 第二步：遍历细胞块获取边缘顶点和角度
-    marginal_points = get_marginal_points_from_cellblock(cb, cells)
-    #print("第一次：marginal_points:", marginal_points)
-
-    marginal_points =get_marginal_points_directly(cells)
-    #print("第二次：marginal_points:", marginal_points)
-
-    marginal_points =enhanced_get_marginal_points(cells, min_shared_count=2)
-    # print("第三次：marginal_points:", marginal_points)
-    for vertex_info in marginal_points:
-        point_v = vertex_info['point_v']  # 边缘顶点
-        point_o = vertex_info['point_o']  # 共享顶点
-        point_a = vertex_info['point_a']  # 相邻顶点A
-        point_b = vertex_info['point_b']  # 相邻顶点B
-        edge_cell1 = vertex_info['edge_cell1']  # 边缘细胞1
-        edge_cell2 = vertex_info['edge_cell2']  # 边缘细胞2
-
-        # 计算两个边缘角
-        angle_AVO = get_angle_by_three_point([point_a, point_v, point_o])
-        angle_BVO = get_angle_by_three_point([point_b, point_v, point_o])
-
-        # 添加到列表
-        original_vertices.append(point_v)
-        pre_angles.append((angle_AVO, angle_BVO))
-
-    # 第三步：比较角度差并决定是否退火
-    moved_count = 0
-    for i, vertex_info in enumerate(marginal_points):
-        point_v = vertex_info['point_v']
-        point_o = vertex_info['point_o']
-        point_a = vertex_info['point_a']
-        point_b = vertex_info['point_b']
-        edge_cell1 = vertex_info['edge_cell1']
-        edge_cell2 = vertex_info['edge_cell2']
-
-        angle_AVO, angle_BVO = pre_angles[i]
-
-        # 计算角度差
-        angle_diff = abs(angle_AVO - angle_BVO)
-        angle_threshold = 0.01  # 角度差阈值（约0.57度），可调整
-
-        # 如果角度差超过阈值，则进行退火移动
-        if angle_diff > angle_threshold:
-            # 计算目标点：使两个角度近似相等
-            target_point = calculate_equal_angle_target(point_v, point_o, point_a, point_b, angle_AVO, angle_BVO)
-
-            # 应用退火速率
-            move_point_fin = get_point_of_destination(
-                point_v,
-                Point(target_point[0], target_point[1]),
-                annealing_rate
-            )
-            move_point_fin = [move_point_fin.x, move_point_fin.y]
-
-            # 安全检查
-            if is_move_safe(edge_cell1, edge_cell2, point_v, point_o, move_point_fin):
-                # 执行移动
-                edge_cell1.points[edge_cell1.points.index(point_v)] = move_point_fin
-                edge_cell2.points[edge_cell2.points.index(point_v)] = move_point_fin
-
-                # 添加到移动后顶点列表
-                moved_vertices.append(move_point_fin)
-                moved_count += 1
-                print(f"边缘顶点移动成功: {point_v} -> {move_point_fin}")
-            else:
-                # 移动不安全，保持原顶点
-                moved_vertices.append(point_v)
-                print(f"边缘顶点移动被拒绝（安全约束）: {point_v}")
-        else:
-            # 角度差太小，不移动
-            moved_vertices.append(point_v)
-            print(f"角度差太小({angle_diff:.4f} < {angle_threshold:.4f})，不移动顶点: {point_v}")
-
-    # 可选：打印统计信息
-    # print(f"边缘退火统计: 总顶点数={len(marginal_points)}, 移动顶点数={moved_count}")
-
-    return moved_count
-#------------------------------------------------------------
-#存在缺陷：
-def get_marginal_move_point_last02_1127(cb, annealing_rate, cells):
-    """
-    修改后的边缘退火函数，使用新的边缘顶点获取方法
-    """
-    # 第一步：初始化三个列表
-    original_vertices = []      # 原始边缘顶点列表
-    moved_vertices = []         # 移动后的边缘顶点列表
-    pre_angles = []             # 移动前的角度列表（存储元组：(angle1, angle2)）
-
-    # 第二步：遍历细胞块获取边缘顶点和角度
-    #marginal_points = get_marginal_points_from_cellblock(cb, cells)
-
-
-
-    marginal_points =get_marginal_points_directly(cells)
-    # print("第二次：marginal_points:", marginal_points)
-
-    #marginal_points =get_marginal_points(cells, min_shared_count=2)
-    #print("第三次：marginal_points:", marginal_points)
-
-    for vertex_info in marginal_points:
-        point_v = vertex_info['point_v']  # 边缘顶点
-        point_o = vertex_info['point_o']  # 共享顶点
-        point_a = vertex_info['point_a']  # 相邻顶点A
-        point_b = vertex_info['point_b']  # 相邻顶点B
-        edge_cell1 = vertex_info['edge_cell1']  # 边缘细胞1
-        edge_cell2 = vertex_info['edge_cell2']  # 边缘细胞2
-
-        # 计算两个边缘角
-        angle_AVO = get_angle_by_three_point([point_a, point_v, point_o])
-        angle_BVO = get_angle_by_three_point([point_b, point_v, point_o])
-
-        # 添加到列表
-        original_vertices.append(point_v)
-        pre_angles.append((angle_AVO, angle_BVO))
-
-    # # 第三步：处理每个边缘顶点，存储原始信息
-    # for vertex_info in marginal_points:
-    #     vertex = vertex_info['vertex']
-    #     sharing_cells = vertex_info['cells']
-    #     neighbors_info = vertex_info['neighbors']
-
-    #     # 存储原始信息
-    #     original_vertices.append(vertex)
-    #     pre_angles.append(vertex_info['angles'])  # 存储所有相关角度
-
-    # # 第四步：边缘退火逻辑 - 使边缘相邻两角相等
-    # moved_count = 0
-    # angle_threshold = math.radians(1.0)  # 1度阈值
-
-    # for i, vertex_info in enumerate(marginal_points):
-    #     vertex = vertex_info['vertex']
-    #     angles = vertex_info['angles']
-    #     sharing_cells = vertex_info['cells']
-    #     neighbors_info = vertex_info['neighbors']
-
-    #     # 只处理有两个共享细胞的边缘顶点
-    #     if len(sharing_cells) != 2:
-    #         continue
-
-    #     # 获取两个相邻角
-    #     if len(angles) >= 2:
-    #         angle1, angle2 = angles[0], angles[1]
-    #         angle_diff = abs(angle1 - angle2)
-    #         print(f"成功获取顶点：顶点 {vertex} 角度差: {math.degrees(angle_diff):.2f}°")
-    #         # 如果角度差超过阈值，进行退火调整
-    #         if angle_diff > angle_threshold:
-    #             print(f"顶点 {vertex} 角度差: {math.degrees(angle_diff):.2f}°, 进行退火调整")
-
-    #             # 计算目标角度：使两个角相等
-    #             target_angle = (angle1 + angle2) / 2
-
-    #             # 获取与顶点相关的边信息
-    #             edge1 = neighbors_info[0]['edge']
-    #             edge2 = neighbors_info[1]['edge']
-
-    #             # 计算移动方向：使两个角趋于相等
-    #             # 方法：将顶点沿着角平分线方向移动
-    #             move_vector = calculate_bisector_move(vertex, edge1, edge2, angle1, angle2, target_angle)
-
-    #             # 应用退火移动
-    #             new_vertex = (
-    #                 vertex[0] + move_vector[0] * annealing_rate,
-    #                 vertex[1] + move_vector[1] * annealing_rate
-    #             )
-
-    #             # 更新顶点位置
-    #             update_vertex_position(vertex, new_vertex, sharing_cells)
-
-    #             # 记录移动后的顶点和角度
-    #             moved_vertices.append(new_vertex)
-    #             moved_count += 1
-
-    #             print(f"顶点移动: {vertex} -> {new_vertex}")
-    #             print(f"角度调整: {math.degrees(angle1):.2f}°, {math.degrees(angle2):.2f}° -> 目标: {math.degrees(target_angle):.2f}°")
-    #         else:
-    #             print(f"顶点 {vertex} 角度差: {math.degrees(angle_diff):.2f}°, 无需调整")
-    #     else:
-    #         print(f"顶点 {vertex} 的共享细胞数不足，无法计算角度差")
-
-    # return moved_count
-
-
-def get_marginal_move_point_last01_1129(cb, annealing_rate, cells):
-    """
-    全新边缘退火逻辑（按照用户要求）:
-    1. 建立三个列表：原始顶点 / 移动后顶点 / 移动前角度
-    2. 获取当前细胞块 cb 的边缘顶点 V，并计算两个边缘角
-    3. 若两角差超过阈值，则沿较小角所在边方向退火移动，使两个角趋于相等
-    """
-    # ---------------------- 新增（1）边缘顶点识别打印 ------------------------
-    # 识别边缘顶点：即 cb 的三个点中哪个属于 layer == 1 的 cell
-    edge_indices = []
-    if cb.cell1.layer == 1:
-        edge_indices.append(("cell1", cb.index1))
-    if cb.cell2.layer == 1:
-        edge_indices.append(("cell2", cb.index2))
-    if cb.cell3.layer == 1:
-        edge_indices.append(("cell3", cb.index3))
-
-    # print(f"[EdgeCheck] 识别到 cb 的边缘顶点数量: {len(edge_indices)}")
-    # for name, idx in edge_indices:
-    #     print(f"[EdgeCheck] 边缘点: {name} 的 index = {idx}, 坐标 = {cb.__getattribute__(name).points[idx]}")
-
-    # 如果没有边缘点，直接返回 0，避免继续执行
-    if len(edge_indices) == 0:
-        print("[EdgeCheck] !!! 未找到边缘顶点，本 cb 不执行边缘退火")
-        return 0
-    # ------------------------------------------------------------------------
-
-    # 第一步：建立三个列表
-    original_vertices = []
-    moved_vertices = []
-    pre_angles = []
-    sum_angle=[]
-
-
-    # 第二步：从 cb 中获取边缘顶点 V 及其相关数据
-
-    # 找到三个细胞中 layer==1 的两个边缘细胞
-    edge_cells = []
-    for c in [cb.cell1, cb.cell2, cb.cell3]:
-        if c.layer == 1:
-            edge_cells.append(c)
-    if len(edge_cells) != 2:
-        return 0  # 不是边缘细胞块
-
-    cell_a, cell_b = edge_cells
-
-    # 共享点 O
-    point_o = cb.cell1.points[cb.index1]
-
-
-    # 找共享边缘顶点 V（不是 O）
-    shared_vertices = [p for p in cell_a.points if p in cell_b.points]
-    point_v = None
-    for p in shared_vertices:
-        if p != point_o:
-            point_v = p
-            break
-    if point_v is None:
-        return 0
-
-    # 获取 point_v 在两个细胞中的相邻点 A 和 B
-    idx_va = cell_a.points.index(point_v)
-    idx_vb = cell_b.points.index(point_v)
-
-    # 在每个边缘 cell 中，V 点有两个邻居：一个是内部共享点 O，另一个是外侧边界点。
-    # 我们希望 A、B 都取"外侧邻居"，否则如果把 O 当成邻居，会出现 A=O 或 B=O，
-    # 导致 ∠AVO 或 ∠BVO 变成 0°。
-    def get_outer_neighbor(cell, idx_v, shared_O_point):
-        n = len(cell.points)
-        prev_p = cell.points[(idx_v - 1) % n]
-        next_p = cell.points[(idx_v + 1) % n]
-
-        # 如果前一个点是 O，则外侧点是后一个；反之亦然
-        if prev_p == shared_O_point and next_p != shared_O_point:
-            return next_p
-        if next_p == shared_O_point and prev_p != shared_O_point:
-            return prev_p
-
-        # 正常几何结构下，V 的两个邻居中应该恰好有一个是 O；
-        # 若不是，说明拓扑或点序有问题，这里做一个保守兜底：仍然取原来的"前一个点"，并打印提示。
-        print("[EdgeCheck] 警告：在 cell 中 V 的两个邻居都不是（或都是） O，使用默认前一顶点作为外侧点")
-        return prev_p
-
-    point_a = get_outer_neighbor(cell_a, idx_va, shared_O)
-    point_b = get_outer_neighbor(cell_b, idx_vb, shared_O)
-
-
-    # 计算两个边缘角
-
-    angle_AVO = get_angle_by_three_point([point_a, point_v, point_o])
-    sum_angle.append(angle_AVO)
-    angle_BVO = get_angle_by_three_point([point_b, point_v, point_o])
-    sum_angle.append(angle_BVO)
-
-    # 加入列表
-    original_vertices.append(point_v)
-    pre_angles.append((angle_AVO, angle_BVO))
-
-
-    # 第三步：比较角度差，决定是否移动
-
-    #----------------------------------------
-    # 形状审查 - 判断是否为三角形几何体
-    #----------------------------------------
-    is_triangle_geometry = (len(cell_a.points) == 3 or len(cell_b.points) == 3)
-
-    # 根据几何体形状设置不同的退火阈值
-    if is_triangle_geometry:
-        angle_threshold = math.radians(60)  # 至少有一个三角形几何体，使用60度阈值
-        cell_a_is_triangle = len(cell_a.points) == 3
-        cell_b_is_triangle = len(cell_b.points) == 3
-        print(f"[Shape] 检测到至少一个三角形几何体 (cell_a: {len(cell_a.points)}边, cell_b: {len(cell_b.points)}边)，使用60度阈值")
-    else:
-        angle_threshold = math.radians(20)  # 两个都不是三角形，使用20度阈值
-        print(f"[Shape] 两个边缘几何体都不是三角形 (cell_a: {len(cell_a.points)}边, cell_b: {len(cell_b.points)}边)，使用20度阈值")
-
-    angle_diff = abs(angle_AVO - angle_BVO)
-
-    if angle_diff < angle_threshold:
-        # 不移动
-        moved_vertices.append(point_v)
-        return 0
-
-
-    # 计算目标点 P：使两个角相等
-    # 规则：沿较小角所在的边方向向外移动
-
-    if angle_AVO < angle_BVO:
-        # AVO 太小 → 沿 AV 方向移动
-        direction = [point_a[0] - point_v[0], point_a[1] - point_v[1]]
-    else:
-        # BVO 太小 → 沿 BV 方向移动
-        direction = [point_b[0] - point_v[0], point_b[1] - point_v[1]]
-
-    # 单位化方向
-    length = math.sqrt(direction[0]**2 + direction[1]**2)
-    if length == 0:
-        return 0
-    direction = [direction[0] / length, direction[1] / length]
-
-
-    # 移动目标点（线性退火）
-    target_point = [
-        point_v[0] + direction[0] * annealing_rate,
-        point_v[1] + direction[1] * annealing_rate
-    ]
-    # candidate_point = [x, y]
-
-    # O 的安全检查
-    # ① 找到三细胞共有的内部点 O
-    shared_O = None
-    for p in cb.cell1.points:
-        if p in cb.cell2.points and p in cb.cell3.points:
-            shared_O = p
-            break
-
-    if shared_O is None:
-        print("[O-Check] 找不到共享 O，跳过")
-        return 0
-
-    idxO1 = cb.cell1.points.index(shared_O)
-    idxO2 = cb.cell2.points.index(shared_O)
-    idxO3 = cb.cell3.points.index(shared_O)
-
-    if not is_O_vertex_safe(cb.cell1, idxO1, target_point): return 0
-    if not is_O_vertex_safe(cb.cell2, idxO2, target_point): return 0
-    if not is_O_vertex_safe(cb.cell3, idxO3, target_point): return 0
-
-
-#--------安全检查---------------
-
-
-
-    # 安全性检查
-    # if not is_vertex_angle_safe_04(cell_a, idx_va, target_point):
-    #     return 0
-    # if not is_vertex_angle_safe_03(cell_b, idx_vb, target_point):
-    #     return 0
-    # candidate = [px, py]  # 你的目标点
-    # if not judge_by_intersection_cell_blocks_new(cb, target_point):
-    #     print("[EdgeCheck] candidate 未通过 judge_by_intersection_cell_blocks_new 检查")
-    #     return 0
-
-
-    # 执行更新
-
-    cell_a.points[idx_va] = target_point
-    cell_b.points[idx_vb] = target_point
-
-    moved_vertices.append(target_point)
-    return 1
-#------------------------------------------------------------
-def get_marginal_move_point_last02_1129(cb, annealing_rate, cells):
-    """
-    全新边缘退火逻辑（满足用户要求）:
-    1. 识别边缘顶点并打印。
-    2. 找到边缘顶点 V 和内部顶点 O。
-    3. 比较两个边缘角（A-V-O 和 B-V-O），沿较小角方向移动 V。
-    4. 对 candidate V 做 O 点安全检查（只检查 V-O 相邻的 cell）。
-    """
-    # ---------------------- step 0：识别边缘顶点（打印） ----------------------
-    edge_indices = []
-    if cb.cell1.layer == 1:
-        edge_indices.append((cb.cell1, cb.index1))
-    if cb.cell2.layer == 1:
-        edge_indices.append((cb.cell2, cb.index2))
-    if cb.cell3.layer == 1:
-        edge_indices.append((cb.cell3, cb.index3))
-
-    print(f"\n[EdgeCheck] 识别到边缘顶点数量: {len(edge_indices)}")
-
-    if len(edge_indices) == 0:
-        print("[EdgeCheck] 无边缘顶点，退出")
-        return 0
-
-    # for c, idx in edge_indices:
-    #     print(f"[EdgeCheck] cell.id={getattr(c, 'id', '?')}  index={idx}  coord={c.points[idx]}")
-
-    # ---------------------- step 1：找到两个边缘 cell ----------------------
-    edge_cells = [c for c in [cb.cell1, cb.cell2, cb.cell3] if c.layer == 1]
-    if len(edge_cells) != 2:
-        return 0  # 非边缘块
-
-    cell_a, cell_b = edge_cells
-
-    # ---------------------- step 2：找到共享内部点 O ----------------------
-    shared_O = None
-    for p in cb.cell1.points:
-        if p in cb.cell2.points and p in cb.cell3.points:
-            shared_O = p
-            break
-
-    if shared_O is None:
-        print("[O-Check] 找不到共享 O，退出")
-        return 0
-
-    # O 在三个 cell 中的索引
-    idxO1 = cb.cell1.points.index(shared_O)
-    idxO2 = cb.cell2.points.index(shared_O)
-    idxO3 = cb.cell3.points.index(shared_O)
-
-    # ---------------------- step 3：找到共享边缘点 V ----------------------
-    shared_vertices = [p for p in cell_a.points if p in cell_b.points]
-    point_v = None
-    for p in shared_vertices:
-        if p != shared_O:
-            point_v = p
-            break
-    if point_v is None:
-        return 0
-
-    # V 在两个 cell 中的索引
-    idx_va = cell_a.points.index(point_v)
-    idx_vb = cell_b.points.index(point_v)
-
-    # 获取 A 和 B
-    point_a = cell_a.points[(idx_va - 1) % len(cell_a.points)]
-    point_b = cell_b.points[(idx_vb - 1) % len(cell_b.points)]
-
-    # ---------------------- step 4：计算两边缘角 ----------------------
-    # 关键修复：直接计算向量夹角，不使用 get_angle_by_three_point。
-    # get_angle_by_three_point 设计用于计算多边形内角，在此处使用会因其凹角判断逻辑而返回错误的大于180度的角度，从而导致系统性旋转。
-    # 正确的方法是计算两个向量间的直接夹角（0-180度）。
-    def calculate_simple_angle(p1, vertex, p2):
-        v1 = (p1[0] - vertex[0], p1[1] - vertex[1])
-        v2 = (p2[0] - vertex[0], p2[1] - vertex[1])
-        dot_product = v1[0] * v2[0] + v1[1] * v2[1]
-        mag1 = math.hypot(*v1)
-        mag2 = math.hypot(*v2)
-        if math.isclose(mag1 * mag2, 0):
-            return 0
-        cos_val = max(-1.0, min(1.0, dot_product / (mag1 * mag2)))
-        return math.acos(cos_val)
-
-    angle_AVO = calculate_simple_angle(point_a, point_v, shared_O)
-    angle_BVO = calculate_simple_angle(point_b, point_v, shared_O)
-
-    #----------------------------------------
-    # 形状审查 - 判断是否为三角形几何体
-    #----------------------------------------
-    is_triangle_geometry = (len(cell_a.points) == 3 or len(cell_b.points) == 3)
-
-    # 根据几何体形状设置不同的退火阈值
-    if is_triangle_geometry:
-        angle_threshold = math.radians(60)  # 至少有一个三角形几何体，使用60度阈值
-        cell_a_is_triangle = len(cell_a.points) == 3
-        cell_b_is_triangle = len(cell_b.points) == 3
-        print(f"[Shape] 检测到至少一个三角形几何体 (cell_a: {len(cell_a.points)}边, cell_b: {len(cell_b.points)}边)，使用60度阈值")
-    else:
-        angle_threshold = math.radians(20)  # 两个都不是三角形，使用20度阈值
-        print(f"[Shape] 两个边缘几何体都不是三角形 (cell_a: {len(cell_a.points)}边, cell_b: {len(cell_b.points)}边)，使用20度阈值")
-
-    print(f"[Angle] A-V-O={angle_AVO:.6f}, B-V-O={angle_BVO:.6f}")
-
-    if abs(angle_AVO - angle_BVO) < angle_threshold:
-        print(f"[Angle] 角度差太小（阈值{math.degrees(angle_threshold):.0f}°），无需退火")
-        return 0
-
-    # ---------------------- step 5：生成 candidate_point ----------------------
-    if angle_AVO < angle_BVO:
-        move_dir = (point_a[0] - point_v[0], point_a[1] - point_v[1])
-    else:
-        move_dir = (point_b[0] - point_v[0], point_b[1] - point_v[1])
-
-    L = math.hypot(move_dir[0], move_dir[1])
-    if L < 1e-12:
-        print("[Move] move_dir 太小，退出")
-        return 0
-
-    dx, dy = move_dir[0] / L, move_dir[1] / L
-    candidate_V = [point_v[0] + dx * annealing_rate,
-                   point_v[1] + dy * annealing_rate]
-
-    #print(f"[Move] candidate_V={candidate_V}")
-
-    # ---------------------- step 6：改进版 O 点安全检查 ----------------------
-    # 找到真正需要检查的 cell（只有 V 与 O 在该 cell 中相邻时才检查）
-    cells_to_check = []
-
-    def push_if_adjacent(cell, idxO):
-        if point_v in cell.points:
-            idxV = cell.points.index(point_v)
-            n = len(cell.points)
-            if (idxV == idxO - 1) or (idxV == (idxO + 1) % n):
-                cells_to_check.append((cell, idxO, idxV))
-
-    push_if_adjacent(cb.cell1, idxO1)
-    push_if_adjacent(cb.cell2, idxO2)
-    push_if_adjacent(cb.cell3, idxO3)
-
-    if len(cells_to_check) == 0:
-        print("[O-Check] V 与 O 在所有 cell 中均不相邻，可安全移动")
-    else:
-        for cell_check, idxO, idxV in cells_to_check:
-            n_cp = len(cell_check.points)
-            def P(i): return cell_check.points[i % n_cp]
-
-            A = P(idxO - 1)
-            Ocoord = P(idxO)
-            B = P(idxO + 1)
-            V_before = P(idxV)
-            V_after = (candidate_V[0], candidate_V[1])
-
-            # 原角
-            Ang_AOV_before = get_angle_by_three_point([A, Ocoord, V_before])
-            Ang_VOB_before = get_angle_by_three_point([V_before, Ocoord, B])
-            Ang_AOB_before = get_angle_by_three_point([A, Ocoord, B])
-
-            # 新角
-            Ang_AOV_after = get_angle_by_three_point([A, Ocoord, V_after])
-            Ang_VOB_after = get_angle_by_three_point([V_after, Ocoord, B])
-            Ang_AOB_after = get_angle_by_three_point([A, Ocoord, B])
-
-            print(f"[O-Check] cell.id={getattr(cell_check,'id','?')} idxO={idxO} idxV={idxV}")
-            print(f"    before: AOV={Ang_AOV_before:.6f}, VOB={Ang_VOB_before:.6f}, AOB={Ang_AOB_before:.6f}")
-            print(f"     after: AOV={Ang_AOV_after:.6f}, VOB={Ang_VOB_after:.6f}, AOB={Ang_AOB_after:.6f}")
-
-            eps = 1e-8
-            delta = 1e-4  # 需要显著增大才算非法
-
-            if (Ang_AOV_after >= math.pi - eps) and ((Ang_AOV_after - Ang_AOV_before) > delta):
-                print("[O-Check STOP] A-O-V >=180° 且显著增大")
-                return 0
-
-            if (Ang_VOB_after >= math.pi - eps) and ((Ang_VOB_after - Ang_VOB_before) > delta):
-                print("[O-Check STOP] V-O-B >=180° 且显著增大")
-                return 0
-
-            if (Ang_AOB_after >= math.pi - eps) and ((Ang_AOB_after - Ang_AOB_before) > delta):
-                print("[O-Check STOP] A-O-B >=180° 且显著增大")
-                return 0
-
-    # ---------------------- step 7：更新两个 cell 中的 V ----------------------
-    cell_a.points[idx_va] = candidate_V
-    cell_b.points[idx_vb] = candidate_V
-
-    print("[Update] 边缘顶点 V 已退火")
-    return 1
-#----------------------------------------------------------------------
 
 def get_all_marginal_points(cells):
     """
@@ -2197,7 +959,7 @@ def get_all_marginal_points(cells):
 
 def find_marginal_key_points_new(point_v, cells):
     """
-    按照新逻辑找关键点：V -> A, B -> edge_cell1, edge_cell2 -> O
+    按照新逻辑找关键点：V -> A, B -> marginal_cell1, marginal_cell2 -> O
 
     新逻辑：
     1. 首先定位所有的边缘顶点，只被两个细胞共享的点为边缘顶点，保存全部的边缘顶点信息
@@ -2216,8 +978,8 @@ def find_marginal_key_points_new(point_v, cells):
             'point_a': point_a,
             'point_b': point_b,
             'point_o': point_o,
-            'edge_cell1': edge_cell1,
-            'edge_cell2': edge_cell2,
+            'marginal_cell1': marginal_cell1,
+            'marginal_cell2': marginal_cell2,
             'idx_va': idx_va,  # V在edge_cell1中的索引
             'idx_vb': idx_vb,  # V在edge_cell2中的索引
             'idx_oa': idx_oa,  # O在edge_cell1中的索引
@@ -2300,8 +1062,8 @@ def find_marginal_key_points_new(point_v, cells):
     # 即：A和B必须是边缘顶点，且是V的邻点
     point_a = None
     point_b = None
-    edge_cell1 = None
-    edge_cell2 = None
+    marginal_cell1 = None
+    marginal_cell2 = None
     idx_va = None
     idx_vb = None
 
@@ -2341,13 +1103,13 @@ def find_marginal_key_points_new(point_v, cells):
     # 选择第一个作为A
     edge_info_a = marginal_points_as_neighbors[0]
     point_a = edge_info_a['point']
-    edge_cell1 = edge_info_a['cell']
+    marginal_cell1 = edge_info_a['cell']
     idx_va = edge_info_a['v_idx']
 
     # 找到来自不同细胞的第二个边缘顶点作为B
     edge_info_b = None
     for edge_info in marginal_points_as_neighbors[1:]:
-        if edge_info['cell'] != edge_cell1 and not points_equal(edge_info['point'], point_a):
+        if edge_info['cell'] != marginal_cell1 and not points_equal(edge_info['point'], point_a):
             edge_info_b = edge_info
             break
 
@@ -2356,7 +1118,7 @@ def find_marginal_key_points_new(point_v, cells):
         return None
 
     point_b = edge_info_b['point']
-    edge_cell2 = edge_info_b['cell']
+    marginal_cell2 = edge_info_b['cell']
     idx_vb = edge_info_b['v_idx']
 
     # Step 4: 由于AV和VB是边缘边，可以映射到两个边缘几何体（edge_cell1和edge_cell2）
@@ -2368,11 +1130,11 @@ def find_marginal_key_points_new(point_v, cells):
     idx_ob = None
 
     # 获取edge_cell1中V的所有邻点
-    n1 = len(edge_cell1.points)
+    n1 = len(marginal_cell1.points)
     v_idx_in_cell1 = idx_va
     neighbors_in_cell1 = [
-        edge_cell1.points[(v_idx_in_cell1 - 1) % n1],  # 前一个邻点
-        edge_cell1.points[(v_idx_in_cell1 + 1) % n1]   # 后一个邻点
+        marginal_cell1.points[(v_idx_in_cell1 - 1) % n1],  # 前一个邻点
+        marginal_cell1.points[(v_idx_in_cell1 + 1) % n1]   # 后一个邻点
     ]
 
     # 检查edge_cell1中V的每个邻点，看是否也在edge_cell2中
@@ -2388,7 +1150,7 @@ def find_marginal_key_points_new(point_v, cells):
         # 检查这个邻点是否在edge_cell2中
         neighbor_in_cell2 = False
         neighbor_idx_in_cell2 = None
-        for i, p in enumerate(edge_cell2.points):
+        for i, p in enumerate(marginal_cell2.points):
             if points_equal(p, neighbor):
                 neighbor_in_cell2 = True
                 neighbor_idx_in_cell2 = i
@@ -2396,16 +1158,16 @@ def find_marginal_key_points_new(point_v, cells):
 
         if neighbor_in_cell2:
             # 验证这个邻点在edge_cell2中是否与V相邻（确保V-O是edge_cell2的一条边）
-            n2 = len(edge_cell2.points)
+            n2 = len(marginal_cell2.points)
             v_idx_in_cell2 = idx_vb
-            prev_neighbor_in_cell2 = edge_cell2.points[(neighbor_idx_in_cell2 - 1) % n2]
-            next_neighbor_in_cell2 = edge_cell2.points[(neighbor_idx_in_cell2 + 1) % n2]
+            prev_neighbor_in_cell2 = marginal_cell2.points[(neighbor_idx_in_cell2 - 1) % n2]
+            next_neighbor_in_cell2 = marginal_cell2.points[(neighbor_idx_in_cell2 + 1) % n2]
 
             # 如果V是这个邻点的相邻点，则这是共边，邻点就是O
             if points_equal(prev_neighbor_in_cell2, point_v) or points_equal(next_neighbor_in_cell2, point_v):
                 point_o = neighbor
                 # 找到O在edge_cell1中的索引
-                for i, p in enumerate(edge_cell1.points):
+                for i, p in enumerate(marginal_cell1.points):
                     if points_equal(p, point_o):
                         idx_oa = i
                         break
@@ -2422,8 +1184,8 @@ def find_marginal_key_points_new(point_v, cells):
         'point_a': point_a,
         'point_b': point_b,
         'point_o': point_o,
-        'edge_cell1': edge_cell1,
-        'edge_cell2': edge_cell2,
+        'marginal_cell1': marginal_cell1,
+        'marginal_cell2': marginal_cell2,
         'idx_va': idx_va,
         'idx_vb': idx_vb,
         'idx_oa': idx_oa,
@@ -2453,8 +1215,8 @@ def calculate_marginal_annealing_distance(point_v, cells):
     point_a = key_points['point_a']
     point_b = key_points['point_b']
     point_o = key_points['point_o']
-    edge_cell1 = key_points['edge_cell1']
-    edge_cell2 = key_points['edge_cell2']
+    marginal_cell1 = key_points['marginal_cell1']
+    marginal_cell2 = key_points['marginal_cell2']
 
     # 计算两边缘角
     def calculate_simple_angle(p1, vertex, p2):
@@ -2474,15 +1236,15 @@ def calculate_marginal_annealing_distance(point_v, cells):
     #----------------------------------------
     # 形状审查 - 判断是否为三角形几何体
     #----------------------------------------
-    is_triangle_geometry = (len(edge_cell1.points) == 3 or len(edge_cell2.points) == 3)
+    is_triangle_geometry = (len(marginal_cell1.points) == 3 or len(marginal_cell2.points) == 3)
 
     # 根据几何体形状设置不同的退火阈值
     if is_triangle_geometry:
         angle_threshold = math.radians(60)  # 至少有一个三角形几何体，使用60度阈值
-        print(f"[Shape] 检测到至少一个三角形几何体 (edge_cell1: {len(edge_cell1.points)}边, edge_cell2: {len(edge_cell2.points)}边)，使用60度阈值")
+        print(f"[Shape] 检测到至少一个三角形几何体 (marginal_cell1: {len(marginal_cell1.points)}边, marginal_cell2: {len(marginal_cell2.points)}边)，使用60度阈值")
     else:
         angle_threshold = math.radians(20)  # 两个都不是三角形，使用20度阈值
-        print(f"[Shape] 两个边缘几何体都不是三角形 (edge_cell1: {len(edge_cell1.points)}边, edge_cell2: {len(edge_cell2.points)}边)，使用20度阈值")
+        print(f"[Shape] 两个边缘几何体都不是三角形 (marginal_cell1: {len(marginal_cell1.points)}边, marginal_cell2: {len(marginal_cell2.points)}边)，使用20度阈值")
 
     # 如果角度差小于阈值，返回0（不需要退火）
     if abs(angle_AVO - angle_BVO) < angle_threshold:
@@ -2506,7 +1268,7 @@ def get_marginal_move_point(point_v, annealing_rate, cells):
     """
     边缘退火逻辑（直接从边缘顶点V开始）：
     1. 输入边缘顶点V（必须是边缘顶点，即只被2个细胞共享）
-    2. 使用新逻辑找关键点：V -> A, B -> edge_cell1, edge_cell2 -> O
+    2. 使用新逻辑找关键点：V -> A, B -> marginal_cell1, marginal_cell2 -> O
        - A、B必须是边缘顶点（只被2个细胞共享）
     3. 计算两边缘角 A-V-O 与 B-V-O，决定退火方向
     4. candidate_V 生成
@@ -2516,67 +1278,24 @@ def get_marginal_move_point(point_v, annealing_rate, cells):
     """
     import math
 
-    #----------------------------------------
-    # 辅助：角度规范化为凸角（0~π）
-    #----------------------------------------
-    def convex_angle(theta):
-        """把角度压缩到 0~π，用于凸角判定"""
-        if theta > math.pi:
-            return 2 * math.pi - theta
-        return theta
 
     #----------------------------------------
-    # Step 1：使用新逻辑找关键点（V -> A, B -> edge_cell1, edge_cell2 -> O）
+    # Step 1：使用新逻辑找关键点（V -> A, B -> marginal_cell1, marginal_cell2 -> O）
     #----------------------------------------
     key_points = find_marginal_key_points_new(point_v, cells)
-    if key_points is None:
-        print(f"[EdgeCheck] 使用新逻辑找不到关键点，退出，V点坐标: ({point_v[0]:.6f}, {point_v[1]:.6f})")
-        return 0
 
     point_a = key_points['point_a']
     point_b = key_points['point_b']
     point_o = key_points['point_o']
-    edge_cell1 = key_points['edge_cell1']
-    edge_cell2 = key_points['edge_cell2']
+    marginal_cell1 = key_points['marginal_cell1']
+    marginal_cell2 = key_points['marginal_cell2']
     idx_va = key_points['idx_va']
     idx_vb = key_points['idx_vb']
     idx_oa = key_points['idx_oa']
     idx_ob = key_points['idx_ob']
 
-    # 验证找到的V确实是输入的point_v
-    def points_equal(p1, p2, tolerance=1e-9):
-        if isinstance(p1, (list, tuple)) and isinstance(p2, (list, tuple)):
-            return abs(p1[0] - p2[0]) < tolerance and abs(p1[1] - p2[1]) < tolerance
-        return False
-
-    if not points_equal(key_points['point_v'], point_v):
-        found_v = key_points['point_v']
-        print(f"[EdgeCheck] 警告：找到的V与输入的V不一致，输入的V: ({point_v[0]:.6f}, {point_v[1]:.6f})，找到的V: ({found_v[0]:.6f}, {found_v[1]:.6f})")
-        return 0
-
     # point_a = cell_a.points[(idx_va - 1) % len(cell_a.points)]
     # point_b = cell_b.points[(idx_vb - 1) % len(cell_b.points)]
-     # 在每个边缘 cell 中，V 点有两个邻居：一个是内部共享点 O，另一个是外侧边界点。
-    # 我们希望 A、B 都取"外侧邻居"，否则如果把 O 当成邻居，会出现 A=O 或 B=O，
-    # 导致 ∠AVO 或 ∠BVO 变成 0°。
-    def get_outer_neighbor(cell, idx_v, shared_O_point):
-        n = len(cell.points)
-        prev_p = cell.points[(idx_v - 1) % n]
-        next_p = cell.points[(idx_v + 1) % n]
-
-        # 如果前一个点是 O，则外侧点是后一个；反之亦然
-        if prev_p == shared_O_point and next_p != shared_O_point:
-            return next_p
-        if next_p == shared_O_point and prev_p != shared_O_point:
-            return prev_p
-
-        # 正常几何结构下，V 的两个邻居中应该恰好有一个是 O；
-        # 若不是，说明拓扑或点序有问题，这里做一个保守兜底：仍然取原来的"前一个点"，并打印提示。
-        print("[EdgeCheck] 警告：在 cell 中 V 的两个邻居都不是（或都是） O，使用默认前一顶点作为外侧点")
-        return prev_p
-
-    # 注意：A和B已经通过新逻辑找到了，它们是边缘边的另一个端点
-    # 不需要再通过get_outer_neighbor查找
 
     # 输出调试信息：先输出V点坐标，再换行输出A,B,O的坐标信息
     print(f"V点坐标: ({point_v[0]:.6f}, {point_v[1]:.6f})")
@@ -2652,15 +1371,15 @@ def get_marginal_move_point(point_v, annealing_rate, cells):
     #----------------------------------------
     # Step 4.5：形状审查 - 判断是否为三角形几何体
     #----------------------------------------
-    is_triangle_geometry = (len(edge_cell1.points) == 3 or len(edge_cell2.points) == 3)
+    is_triangle_geometry = (len(marginal_cell1.points) == 3 or len(marginal_cell2.points) == 3)
 
     # 根据几何体形状设置不同的退火阈值
     if is_triangle_geometry:
         angle_threshold = math.radians(60)  # 至少有一个三角形几何体，使用60度阈值
-        print(f"[Shape] 检测到至少一个三角形几何体 (edge_cell1: {len(edge_cell1.points)}边, edge_cell2: {len(edge_cell2.points)}边)，使用60度阈值")
+        print(f"[Shape] 检测到至少一个三角形几何体 (marginal_cell1: {len(marginal_cell1.points)}边, marginal_cell2: {len(marginal_cell2.points)}边)，使用60度阈值")
     else:
         angle_threshold = math.radians(20)  # 两个都不是三角形，使用20度阈值
-        print(f"[Shape] 两个边缘几何体都不是三角形 (edge_cell1: {len(edge_cell1.points)}边, edge_cell2: {len(edge_cell2.points)}边)，使用20度阈值")
+        print(f"[Shape] 两个边缘几何体都不是三角形 (marginal_cell1: {len(marginal_cell1.points)}边, marginal_cell2: {len(marginal_cell2.points)}边)，使用20度阈值")
 
     # 转换为角度值并格式化输出
     aov_deg = rad_to_deg_display(angle_AVO)
@@ -2691,88 +1410,22 @@ def get_marginal_move_point(point_v, annealing_rate, cells):
     #print(f"[Move] candidate_V = {candidate_V}")
 
     #----------------------------------------
-    # Step 6：O 点安全检查（只检查 O-V 相邻的 cell）
-    #----------------------------------------
-    cells_to_check = []
-
-    def push_if_adjacent(cell, idxO):
-        if point_v in cell.points:
-            idxV = cell.points.index(point_v)
-            n = len(cell.points)
-            if (idxV == (idxO - 1) % n) or (idxV == (idxO + 1) % n):
-                cells_to_check.append((cell, idxO, idxV))
-
-    # 检查edge_cell1和edge_cell2中O-V是否相邻
-    push_if_adjacent(edge_cell1, idx_oa)
-    push_if_adjacent(edge_cell2, idx_ob)
-
-    # 还需要检查包含O点的其他细胞（如果有第三个细胞也包含O点）
-    for cell in cells:
-        if cell != edge_cell1 and cell != edge_cell2:
-            if point_o in cell.points:
-                idxO_other = cell.points.index(point_o)
-                push_if_adjacent(cell, idxO_other)
-
-    #print(f"[O-Check] 需要检查的 cell 数量: {len(cells_to_check)}")
-
-    for cell_check, idxO, idxV in cells_to_check:
-        ncp = len(cell_check.points)
-        def P(i): return cell_check.points[i % ncp]
-
-        A = P(idxO - 1)
-        Ocoord = P(idxO)
-        B = P(idxO + 1)
-        V_before = P(idxV)
-        V_after = (candidate_V[0], candidate_V[1])
-
-        # 原角
-        AOV_b = convex_angle(get_angle_by_three_point([A, Ocoord, V_before]))
-        VOB_b = convex_angle(get_angle_by_three_point([V_before, Ocoord, B]))
-        AOB_b = convex_angle(get_angle_by_three_point([A, Ocoord, B]))
-
-        # 新角
-        AOV_a = convex_angle(get_angle_by_three_point([A, Ocoord, V_after]))
-        VOB_a = convex_angle(get_angle_by_three_point([V_after, Ocoord, B]))
-        AOB_a = convex_angle(get_angle_by_three_point([A, Ocoord, B]))
-
-        # print(f"[O-Check] cell.id={getattr(cell_check,'id','?')} idxO={idxO} idxV={idxV}")
-        # print(f"    convex_before: AOV={AOV_b:.6f}, VOB={VOB_b:.6f}, AOB={AOB_b:.6f}")
-        # print(f"    convex_after : AOV={AOV_a:.6f}, VOB={VOB_a:.6f}, AOB={AOB_a:.6f}")
-        # print(f"    convex_before: AOV={AOV_b:.6f}, VOB={VOB_b:.6f}")
-        # print(f"    convex_after : AOV={AOV_a:.6f}, VOB={VOB_a:.6f}")
-
-        eps = 1e-8
-        delta = 1e-4
-
-        if AOV_a >= math.pi - eps and (AOV_a - AOV_b) > delta:
-            print("[O-Check STOP] A-O-V >=180° 且显著增大")
-            return 0
-
-        if VOB_a >= math.pi - eps and (VOB_a - VOB_b) > delta:
-            print("[O-Check STOP] V-O-B >=180° 且显著增大")
-            return 0
-
-        if AOB_a >= math.pi - eps and (AOB_a - AOB_b) > delta:
-            print("[O-Check STOP] A-O-B >=180° 且显著增大")
-            return 0
-
-    #----------------------------------------
     # Step 6.5：退火后凸性检查（两个边缘细胞必须仍为凸多边形）
     #----------------------------------------
-    if not is_cell_convex_after_move(edge_cell1, idx_va, candidate_V):
-        print("[ConvexCheck STOP] 退火后 edge_cell1 非凸，跳过该顶点")
+    if not is_cell_convex_after_move(marginal_cell1, idx_va, candidate_V):
+        print("[ConvexCheck STOP] 退火后 marginal_cell1 非凸，跳过该顶点")
         print()  # 区分不同顶点的退火
         return 0
-    if not is_cell_convex_after_move(edge_cell2, idx_vb, candidate_V):
-        print("[ConvexCheck STOP] 退火后 edge_cell2 非凸，跳过该顶点")
+    if not is_cell_convex_after_move(marginal_cell2, idx_vb, candidate_V):
+        print("[ConvexCheck STOP] 退火后 marginal_cell2 非凸，跳过该顶点")
         print()  # 区分不同顶点的退火
         return 0
 
     #----------------------------------------
     # Step 7：真正更新两个边缘 cell 的顶点 V
     #----------------------------------------
-    edge_cell1.points[idx_va] = candidate_V
-    edge_cell2.points[idx_vb] = candidate_V
+    marginal_cell1.points[idx_va] = candidate_V
+    marginal_cell2.points[idx_vb] = candidate_V
     angle_AVO = get_angle_by_three_point([point_a, candidate_V, point_o])
     angle_BVO = get_angle_by_three_point([point_b, candidate_V, point_o])
 
@@ -2786,1314 +1439,26 @@ def get_marginal_move_point(point_v, annealing_rate, cells):
     return 1
 
 #-------------------------------------------------
-def get_marginal_move_point_gradient(cb, annealing_rate, cells,
-                                 max_iter=40, grad_eps=1e-6, init_lr=0.5, tol=1e-5):
-    """
-    基于数值梯度下降求使两个边缘角相等的目标点（更精确、平滑收敛）。
-    最终按 annealing_rate 从当前 V 向目标点前进一步（与框架兼容）。
-    返回 1: 移动成功并写回 edge_cell1/edge_cell2
-           0: 未移动（不安全或未收敛）
-    说明：本函数仅处理单个 cell-block cb（边缘块），与原 move_point 的调用一致。
-    """
 
-    # 识别两个边缘细胞和共享点 O（与现有实现一致）
-    if cb.cell1.layer != 1:
-        edge_cell1 = cb.cell2
-        edge_cell2 = cb.cell3
-    elif cb.cell2.layer != 1:
-        edge_cell1 = cb.cell1
-        edge_cell2 = cb.cell3
-    elif cb.cell3.layer != 1:
-        edge_cell1 = cb.cell1
-        edge_cell2 = cb.cell2
-    else:
-        return 0
-
-    point_o = cb.cell1.points[cb.index1]
-
-    # 找 V（两个边缘细胞共同但不是 O 的顶点）
-    point_v = None
-    for p in edge_cell1.points:
-        if p in edge_cell2.points and p != point_o:
-            point_v = p
-            break
-    if point_v is None:
-        return 0
-
-    # 验证为边缘顶点（只被至多两个细胞共享）
-    cnt = 0
-    for c in cells:
-        for p in c.points:
-            if p == point_v:
-                cnt += 1
-    if cnt > 2:
-        return 0
-
-    # 获取相邻点 A、B（对应两个边缘角 A-V-O, B-V-O）
-    idx_v1 = edge_cell1.points.index(point_v)
-    idx_o1 = edge_cell1.points.index(point_o)
-    idx_v2 = edge_cell2.points.index(point_v)
-    idx_o2 = edge_cell2.points.index(point_o)
-
-    # 计算点 A（edge_cell1 的与 V 相邻的那个在边缘方向上）
-    if (idx_v1 - idx_o1) > 0:
-        # V 在 O 之后
-        point_a = edge_cell1.points[(idx_v1 + 1) % len(edge_cell1.points)]
-        point_b = edge_cell2.points[(idx_v2 - 1) % len(edge_cell2.points)]
-    else:
-        point_a = edge_cell1.points[(idx_v1 - 1) % len(edge_cell1.points)]
-        point_b = edge_cell2.points[(idx_v2 + 1) % len(edge_cell2.points)]
-
-    # 辅助：给定 V 值，返回两个角（AVO, BVO）
-    def two_angles(v_xy):
-        a = get_angle_by_three_point([point_a, v_xy, point_o])
-        b = get_angle_by_three_point([point_b, v_xy, point_o])
-        return a, b
-
-    # 目标函数：角差平方（可微的数值优化目标）
-    def loss(v_xy):
-        a, b = two_angles(v_xy)
-        d = a - b
-        return d * d
-
-    # 数值梯度（中心差分）
-    def numeric_grad(v_xy, eps=grad_eps):
-        x, y = v_xy[0], v_xy[1]
-        f0 = loss([x, y])
-        fx = loss([x + eps, y])
-        fy = loss([x, y + eps])
-        # 中心差分更稳定，但这里用前差分或中心差分都可；为简洁使用前差分
-        gx = (fx - f0) / eps
-        gy = (fy - f0) / eps
-        return [gx, gy]
-
-    # 初始点（float copy）
-    curr = [float(point_v[0]), float(point_v[1])]
-
-    # 如果角度差已经在容忍范围，直接不动
-    a0, b0 = two_angles(curr)
-    if abs(a0 - b0) < 1e-4:
-        return 0
-
-    lr = init_lr
-    best = curr[:]
-    best_loss = loss(curr)
-
-    # 梯度下降主循环（带 backtracking：若 candidate 不安全或 loss 不降则缩 lr）
-    for it in range(max_iter):
-        g = numeric_grad(curr)
-        gnorm = math.hypot(g[0], g[1])
-        if gnorm == 0:
-            break
-
-        # 归一化梯度以获得稳定步长，再乘以 lr
-        step = [-(g[0] / gnorm) * lr, -(g[1] / gnorm) * lr]
-
-        # 尝试若干回退步骤（如果违反安全或 loss 不降则 shrink）
-        success_step = False
-        local_lr = lr
-        for back in range(8):
-            cand = [curr[0] + step[0], curr[1] + step[1]]
-            cand_loss = loss(cand)
-
-            # 临时 final point：在 cand 上不会立刻写回；我们只检查安全性。
-            # 使用 is_vertex_angle_safe_01 对两个边缘细胞的 idx_v 与 idx_o 进行安全检查
-            safe1 = is_vertex_angle_safe_01(edge_cell1, idx_v1, cand)
-            safe1 = safe1 and is_vertex_angle_safe_01(edge_cell1, idx_o1, cand)
-            safe2 = is_vertex_angle_safe_01(edge_cell2, idx_v2, cand)
-            safe2 = safe2 and is_vertex_angle_safe_01(edge_cell2, idx_o2, cand)
-
-            # 若安全且 loss 降低，则接受
-            if safe1 and safe2 and cand_loss < best_loss + 1e-12:
-                curr = cand
-                best_loss = cand_loss
-                best = cand[:]
-                success_step = True
-                break
-            else:
-                # 回退：缩小步长并重算 step
-                local_lr *= 0.5
-                step = [-(g[0] / gnorm) * local_lr, -(g[1] / gnorm) * local_lr]
-
-        if not success_step:
-            # 如果本次无法找到安全且降低 loss 的步长，停止迭代（防止破坏拓扑）
-            break
-
-        # 判断收敛（loss 降得很小）
-        if best_loss < tol:
-            break
-
-        # 可自适应缩小 lr（使收敛更平滑）
-        lr = min(lr, local_lr)
-
-    # 最终目标点 best（可能等于初始 curr）
-    target_xy = best
-
-    # 再次检查角度差，若仍然很大但安全无法进一步下降，则放弃
-    final_a, final_b = two_angles(target_xy)
-    if abs(final_a - final_b) > 1e-2:  # 若仍大于 ~0.57度，则认为未成功收敛到平衡
-        # 但是可以尝试按 annealing_rate 做一次小步（仍需安全检查）
-        pass
-
-    # 按 annealing_rate 从原始 point_v 向 target 前进一步（与框架其余部分一致）
-    # 若存在 get_point_of_destination 和 Point，可用它；否则做线性插值
-    try:
-        # 尝试使用已有函数（保持兼容性）
-        tgt_point = Point(target_xy[0], target_xy[1])
-        move_pt = get_point_of_destination(point_v, tgt_point, annealing_rate)
-        move_point_fin = [move_pt.x, move_pt.y]
-    except Exception:
-        # 退化到线性插值
-        move_point_fin = [
-            point_v[0] + (target_xy[0] - point_v[0]) * annealing_rate,
-            point_v[1] + (target_xy[1] - point_v[1]) * annealing_rate
-        ]
-
-    # 最终安全检查（6角）和边缘几何约束
-    idx_v1 = edge_cell1.points.index(point_v)
-    idx_o1 = edge_cell1.points.index(point_o)
-    idx_v2 = edge_cell2.points.index(point_v)
-    idx_o2 = edge_cell2.points.index(point_o)
-
-    safe_final = (
-        is_vertex_angle_safe_01(edge_cell1, idx_v1, move_point_fin) and
-        is_vertex_angle_safe_01(edge_cell1, idx_o1, move_point_fin) and
-        is_vertex_angle_safe_01(edge_cell2, idx_v2, move_point_fin) and
-        is_vertex_angle_safe_01(edge_cell2, idx_o2, move_point_fin)
-    )
-    if not safe_final:
-        return 0
-
-    # 额外几何判断（保持原有 judge_edge_if_annealing 约束）
-    if judge_edge_if_annealing(point_v, point_o, edge_cell1, edge_cell2, move_point_fin) <= 0:
-        return 0
-
-    # 写回并更新顶点（与现有实现一致）
-    edge_cell1.points[idx_v1] = move_point_fin
-    edge_cell2.points[idx_v2] = move_point_fin
-
-    # 如果你有需要，可以在这里调用 setVertex() 更新几何信息：
-    try:
-        edge_cell1.setVertex()
-        edge_cell2.setVertex()
-    except Exception:
-        pass
-
-    return 1
-
-#-------------------------------------------------
-def calculate_bisector_move(vertex, edge1, edge2, angle1, angle2, target_angle):
-    """
-    计算使两个相邻角相等的移动向量
-    方法：沿着角平分线方向移动顶点
-    """
-    # 获取两条边的向量
-    vec1 = (edge1[1][0] - edge1[0][0], edge1[1][1] - edge1[0][1])
-    vec2 = (edge2[1][0] - edge2[0][0], edge2[1][1] - edge2[0][1])
-
-    # 计算单位向量
-    length1 = math.sqrt(vec1[0]**2 + vec1[1]**2)
-    length2 = math.sqrt(vec2[0]**2 + vec2[1]**2)
-
-    if length1 > 0:
-        unit_vec1 = (vec1[0]/length1, vec1[1]/length1)
-    else:
-        unit_vec1 = (0, 0)
-
-    if length2 > 0:
-        unit_vec2 = (vec2[0]/length2, vec2[1]/length2)
-    else:
-        unit_vec2 = (0, 0)
-
-    # 计算角平分线方向（两个单位向量的和）
-    bisector = (unit_vec1[0] + unit_vec2[0], unit_vec1[1] + unit_vec2[1])
-
-    # 归一化角平分线向量
-    bisector_length = math.sqrt(bisector[0]**2 + bisector[1]**2)
-    if bisector_length > 0:
-        unit_bisector = (bisector[0]/bisector_length, bisector[1]/bisector_length)
-    else:
-        unit_bisector = (0, 0)
-
-    # 根据角度差确定移动方向和大小
-    angle_diff = angle1 - angle2
-    move_strength = abs(angle_diff) / math.pi  # 移动强度与角度差成正比
-
-    # 确定移动方向：使较小的角增大，较大的角减小
-    if angle_diff > 0:
-        # angle1 > angle2，需要减小angle1，增大angle2
-        move_direction = unit_bisector
-    else:
-        # angle1 < angle2，需要增大angle1，减小angle2
-        move_direction = (-unit_bisector[0], -unit_bisector[1])
-
-    # 计算最终移动向量
-    move_vector = (move_direction[0] * move_strength, move_direction[1] * move_strength)
-
-    return move_vector
-
-def update_vertex_position(old_vertex, new_vertex, sharing_cells):
-    """
-    更新顶点在所有共享细胞中的位置
-    """
-    for cell in sharing_cells:
-        for i in range(len(cell.points)):
-            if (abs(cell.points[i][0] - old_vertex[0]) < 1e-6 and
-                abs(cell.points[i][1] - old_vertex[1]) < 1e-6):
-                cell.points[i] = [new_vertex[0], new_vertex[1]]
-                break
 
 #------------------------------------------------------------
-def get_marginal_points_from_cellblock_last(cb, cells):
-    """
-    从细胞块中提取边缘顶点信息
-    返回包含顶点信息的字典列表
-    """
-    marginal_points_info = []
 
-    # 识别边缘细胞
-    if cb.cell1.layer != 1:
-        edge_cell1 = cb.cell2
-        edge_cell2 = cb.cell3
-    elif cb.cell2.layer != 1:
-        edge_cell1 = cb.cell1
-        edge_cell2 = cb.cell3
-    elif cb.cell3.layer != 1:
-        edge_cell1 = cb.cell1
-        edge_cell2 = cb.cell2
-    else:
-        return marginal_points_info  # 没有边缘细胞
 
-    # 获取共享顶点O（三个细胞的交汇点）
-    point_o = cb.cell1.points[cb.index1]
 
-    # 寻找边缘细胞共享的顶点V（不是交汇点O）
-    point_v = None
-    for p in edge_cell1.points:
-        if p in edge_cell2.points and p != point_o:
-            point_v = p
-            break
 
-    if point_v is None:
-        return marginal_points_info
 
-    # 确定相邻顶点A和B
-    if edge_cell1.points.index(point_v) - edge_cell1.points.index(point_o) > 0:
-        point_a = edge_cell1.points[(edge_cell1.points.index(point_v) + 1) % len(edge_cell1.points)]
-        point_b = edge_cell2.points[edge_cell2.points.index(point_v) - 1]
-    else:
-        point_a = edge_cell1.points[edge_cell1.points.index(point_v) - 1]
-        point_b = edge_cell2.points[(edge_cell2.points.index(point_v) + 1) % len(edge_cell2.points)]
 
-    # 构建顶点信息字典
-    vertex_info = {
-        'point_v': point_v,
-        'point_o': point_o,
-        'point_a': point_a,
-        'point_b': point_b,
-        'edge_cell1': edge_cell1,
-        'edge_cell2': edge_cell2
-    }
 
-    marginal_points_info.append(vertex_info)
-    return marginal_points_info
 
-def get_marginal_points_from_cellblock(cb, cells):
-    """
-    重写版本：放弃细胞块概念，直接基于细胞收集边缘顶点信息
-    步骤：
-    1. 设置列表保存边缘顶点信息
-    2. 遍历细胞，找到边缘细胞
-    3. 找到边缘细胞的边缘顶点
-    4. 将边缘顶点信息存放在列表中
-    """
-    marginal_points_info = []
 
-    # 第一步：设置列表保存边缘顶点信息
-    # 这个列表将包含字典，每个字典表示一个边缘顶点的信息
-    # 格式：{'vertex': 顶点坐标, 'cell1': 细胞1, 'cell2': 细胞2, 'neighbors': 相邻顶点列表}
 
-    # 第二步：遍历所有细胞，找到边缘细胞
-    edge_cells = []
-    for cell in cells:
-        if cell.layer == 1:  # 边缘细胞的layer等于1
-            edge_cells.append(cell)
 
-    print(f"找到 {len(edge_cells)} 个边缘细胞")
 
-    # 第三步：找到边缘细胞的边缘顶点
-    # 边缘顶点定义：被两个边缘细胞共享的顶点
-    vertex_to_cells = {}  # 顶点到细胞的映射
 
-    # 建立顶点到细胞的映射
-    for cell in edge_cells:
-        for vertex in cell.points:
-            vertex_tuple = tuple(vertex)  # 将列表转换为元组，以便作为字典键
-            if vertex_tuple not in vertex_to_cells:
-                vertex_to_cells[vertex_tuple] = []
-            vertex_to_cells[vertex_tuple].append(cell)
 
-    # 第四步：将边缘顶点信息存放在列表中
-    for vertex, sharing_cells in vertex_to_cells.items():
-        # 只处理被两个或更多边缘细胞共享的顶点
-        if len(sharing_cells) >= 2:
-            # 获取相邻顶点信息
-            neighbor_info = get_vertex_neighbors(vertex, sharing_cells)
 
-            # 构建顶点信息字典
-            vertex_info = {
-                'vertex': list(vertex),  # 转回列表格式
-                'cells': sharing_cells,  # 共享该顶点的细胞
-                'neighbors': neighbor_info,  # 相邻顶点信息
-                'type': 'marginal_point'  # 标记为边缘顶点
-            }
 
-            marginal_points_info.append(vertex_info)
-            print(f"找到边缘顶点: {vertex}")
-
-    print(f"总共找到 {len(marginal_points_info)} 个边缘顶点")
-    return marginal_points_info
-
-
-def get_vertex_neighbors(vertex, sharing_cells):
-    """
-    获取顶点在共享细胞中的相邻顶点信息
-    """
-    neighbor_info = []
-    vertex_list = list(vertex)  # 将元组转回列表
-
-    for cell in sharing_cells:
-        # 找到顶点在细胞中的索引
-        if vertex_list in cell.points:
-            vertex_index = cell.points.index(vertex_list)
-            num_points = len(cell.points)
-
-            # 获取前一个和后一个顶点（考虑循环）
-            prev_vertex = cell.points[(vertex_index - 1) % num_points]
-            next_vertex = cell.points[(vertex_index + 1) % num_points]
-
-            # 计算与相邻顶点形成的角度
-            angle_prev = get_angle_by_three_point([prev_vertex, vertex_list, next_vertex])
-
-            # 存储相邻顶点信息
-            cell_neighbor_info = {
-                'cell': cell,
-                'prev_vertex': prev_vertex,
-                'next_vertex': next_vertex,
-                'angle': angle_prev
-            }
-
-            neighbor_info.append(cell_neighbor_info)
-
-    return neighbor_info
-
-
-def get_marginal_points_directly(cells):
-    """
-    直接获取所有边缘顶点的替代函数
-    这个函数不依赖于细胞块，直接从细胞中提取边缘顶点
-    """
-    marginal_points = []
-
-    # 第一步：收集所有边缘细胞
-    edge_cells = [cell for cell in cells if cell.layer != 1]
-
-    # 第二步：建立顶点到细胞的映射
-    vertex_map = {}
-    for cell in edge_cells:
-        for i, vertex in enumerate(cell.points):
-            vertex_key = tuple(vertex)  # 使用元组作为键
-            if vertex_key not in vertex_map:
-                vertex_map[vertex_key] = {
-                    'vertex': vertex,
-                    'cells': [],
-                    'indices': []
-                }
-            vertex_map[vertex_key]['cells'].append(cell)
-            vertex_map[vertex_key]['indices'].append(i)
-
-    # 第三步：筛选出被多个边缘细胞共享的顶点
-    for vertex_key, info in vertex_map.items():
-        if len(info['cells']) >= 2:  # 被两个或更多边缘细胞共享
-            # 获取相邻细胞信息
-            neighbor_cells = []
-            for i, cell in enumerate(info['cells']):
-                vertex_index = info['indices'][i]
-                num_points = len(cell.points)
-
-                # 获取相邻顶点
-                prev_index = (vertex_index - 1) % num_points
-                next_index = (vertex_index + 1) % num_points
-
-                prev_vertex = cell.points[prev_index]
-                next_vertex = cell.points[next_index]
-
-                # 计算角度
-                angle = get_angle_by_three_point([prev_vertex, info['vertex'], next_vertex])
-
-                neighbor_info = {
-                    'cell': cell,
-                    'prev_vertex': prev_vertex,
-                    'next_vertex': next_vertex,
-                    'angle': angle,
-                    'index': vertex_index
-                }
-
-                neighbor_cells.append(neighbor_info)
-
-            # 构建完整的顶点信息
-            vertex_info = {
-                'vertex': info['vertex'],
-                'cells': info['cells'],
-                'neighbors': neighbor_cells,
-                'type': 'marginal_point',
-                'shared_count': len(info['cells'])
-            }
-
-            marginal_points.append(vertex_info)
-
-    return marginal_points
-
-
-def enhanced_get_marginal_points(cells, min_shared_count=2):
-    """
-    增强版的边缘顶点获取函数
-    可以指定最小共享细胞数
-    """
-    print("=== 开始收集边缘顶点信息 ===")
-
-    # 收集所有边缘细胞
-    edge_cells = [cell for cell in cells if hasattr(cell, 'layer') and cell.layer == 1]
-    print(f"找到 {len(edge_cells)} 个边缘细胞")
-
-    if not edge_cells:
-        print("未找到边缘细胞")
-        return []
-
-    # 使用字典记录每个顶点被哪些细胞共享
-    vertex_cell_map = {}
-
-    for cell in edge_cells:
-        cell_id = id(cell)  # 使用细胞ID作为标识
-
-        for i, vertex in enumerate(cell.points):
-            vertex_key = tuple(vertex)
-
-            if vertex_key not in vertex_cell_map:
-                vertex_cell_map[vertex_key] = {
-                    'vertex': vertex,
-                    'cells': [],
-                    'indices': [],
-                    'cell_ids': set()  # 用于快速查找
-                }
-
-            # 避免重复添加同一细胞
-            if cell_id not in vertex_cell_map[vertex_key]['cell_ids']:
-                vertex_cell_map[vertex_key]['cells'].append(cell)
-                vertex_cell_map[vertex_key]['indices'].append(i)
-                vertex_cell_map[vertex_key]['cell_ids'].add(cell_id)
-
-    # 筛选出满足共享条件的顶点
-    marginal_points = []
-    for vertex_key, info in vertex_cell_map.items():
-        shared_count = len(info['cells'])
-
-        if shared_count >= min_shared_count:
-            #print(f"顶点 {vertex_key} 被 {shared_count} 个边缘细胞共享")
-
-            # 获取详细的相邻信息
-            detailed_info = get_detailed_vertex_info(info['vertex'], info['cells'], info['indices'])
-            detailed_info['shared_count'] = shared_count
-
-            marginal_points.append(detailed_info)
-
-    print(f"总共找到 {len(marginal_points)} 个符合条件的边缘顶点")
-    return marginal_points
-
-def get_marginal_points(cells, min_shared_count=2):
-    """
-    增强版的边缘顶点获取函数
-    可以指定最小共享细胞数
-
-    参数:
-    cells: 细胞列表
-    min_shared_count: 最小共享细胞数，默认为2（被两个细胞共享且不被第三个共享）
-
-    返回:
-    list: 边缘顶点列表
-    """
-    print("=== 开始收集边缘顶点信息 ===")
-
-    # 收集所有边缘细胞
-    edge_cells = [cell for cell in cells if hasattr(cell, 'layer') and cell.layer == 1]
-    print(f"找到 {len(edge_cells)} 个边缘细胞")
-
-    if not edge_cells:
-        print("未找到边缘细胞")
-        return []
-
-    # 统计每个顶点被多少个边缘细胞共享
-    vertex_shared_count = {}
-
-    # 遍历所有边缘细胞，统计顶点共享情况
-    for i, cell in enumerate(edge_cells):
-        if hasattr(cell, 'vertices'):
-            for vertex in cell.vertices:
-                if vertex not in vertex_shared_count:
-                    vertex_shared_count[vertex] = set()
-                vertex_shared_count[vertex].add(i)  # 记录共享此顶点的细胞索引
-
-    print(f"统计了 {len(vertex_shared_count)} 个唯一顶点的共享信息")
-
-    # 找出满足条件的边缘顶点：被恰好min_shared_count个细胞共享
-    marginal_points = []
-
-    for vertex, sharing_cells in vertex_shared_count.items():
-        share_count = len(sharing_cells)
-
-        # 如果顶点被恰好min_shared_count个边缘细胞共享，则认为是边缘顶点
-        if share_count == min_shared_count:
-            marginal_points.append(vertex)
-
-    print(f"找到 {len(marginal_points)} 个边缘顶点（被恰好 {min_shared_count} 个边缘细胞共享）")
-
-    # 可选：打印详细信息用于调试
-    if marginal_points and len(marginal_points) <= 20:  # 避免输出过多信息
-        print("边缘顶点详情：")
-        for i, vertex in enumerate(marginal_points[:10]):  # 只显示前10个
-            sharing_cells = vertex_shared_count[vertex]
-            print(f"  顶点 {i+1}: 被边缘细胞 {sharing_cells} 共享")
-        if len(marginal_points) > 10:
-            print(f"  ... 以及 {len(marginal_points) - 10} 个更多顶点")
-
-    return marginal_points
-
-def get_detailed_vertex_info(vertex, sharing_cells, indices):
-    """
-    获取顶点的详细信息，包括相邻顶点和角度
-    """
-    detailed_info = {
-        'vertex': vertex,
-        'cells': sharing_cells,
-        'neighbors': [],
-        'angles': []
-    }
-
-    for i, cell in enumerate(sharing_cells):
-        vertex_index = indices[i]
-        num_points = len(cell.points)
-
-        # 获取前后相邻顶点
-        prev_index = (vertex_index - 1) % num_points
-        next_index = (vertex_index + 1) % num_points
-
-        prev_vertex = cell.points[prev_index]
-        next_vertex = cell.points[next_index]
-
-        # 计算角度
-        angle = get_angle_by_three_point([prev_vertex, vertex, next_vertex])
-
-        # 存储信息
-        cell_info = {
-            'cell': cell,
-            'prev_vertex': prev_vertex,
-            'next_vertex': next_vertex,
-            'angle': angle,
-            'index_in_cell': vertex_index
-        }
-
-        detailed_info['neighbors'].append(cell_info)
-        detailed_info['angles'].append(angle)
-
-    return detailed_info
-
-def calculate_equal_angle_target(point_v, point_o, point_a, point_b, angle_AVO, angle_BVO):
-    """
-    修改后的边缘退火目标点计算函数
-    实现三步逻辑：
-    1. 计算角度和angle_sum及最终角度angle_final
-    2. 计算当前顶点到理想位置的距离distance
-    3. 计算本次移动的目标点
-    """
-    # 第一步：计算角度和及最终角度
-    angle_sum = angle_AVO + angle_BVO
-    angle_final = angle_sum / 2.0  # 最终两个角度应该相等，各占一半
-
-    print(f"角度计算: ∠AVO={math.degrees(angle_AVO):.2f}°, ∠BVO={math.degrees(angle_BVO):.2f}°")
-    print(f"角度和: {math.degrees(angle_sum):.2f}°, 最终角度: {math.degrees(angle_final):.2f}°")
-
-    # 第二步：计算当前顶点到理想位置的距离
-    # 这里需要计算使两个角度相等的理想位置
-    ideal_point = calculate_ideal_point_for_equal_angles(point_v, point_o, point_a, point_b, angle_final)
-
-    # 计算当前顶点到理想位置的距离
-    distance = get_distance_point_point(point_v, ideal_point)
-    print(f"当前顶点到理想位置的距离: {distance:.4f}")
-
-    # 第三步：计算本次移动的目标点（移动annealing_rate*distance的距离）
-    # 计算移动方向向量
-    direction_vector = [
-        ideal_point[0] - point_v[0],
-        ideal_point[1] - point_v[1]
-    ]
-
-    # 归一化方向向量
-    vector_length = math.sqrt(direction_vector[0]**2 + direction_vector[1]**2)
-    if vector_length > 0:
-        unit_vector = [
-            direction_vector[0] / vector_length,
-            direction_vector[1] / vector_length
-        ]
-    else:
-        # 如果向量长度为0，则不需要移动
-        unit_vector = [0, 0]
-
-    # 计算本次移动的距离
-    move_distance = distance
-
-    # 计算目标点
-    target_x = point_v[0] + unit_vector[0] * move_distance
-    target_y = point_v[1] + unit_vector[1] * move_distance
-
-    target_point = [target_x, target_y]
-
-    print(f"本次移动距离: {move_distance:.4f} )")
-    print(f"目标点: {target_point}")
-
-    return target_point
-
-
-def calculate_ideal_point_for_equal_angles(point_v, point_o, point_a, point_b, target_angle):
-    """
-    计算使两个角度相等的理想顶点位置
-    使用几何方法计算理想位置
-    """
-    # 方法1: 使用角平分线和距离比例计算理想位置
-
-    # 计算向量VO
-    vo_vector = [point_o[0] - point_v[0], point_o[1] - point_v[1]]
-    vo_length = math.sqrt(vo_vector[0]**2 + vo_vector[1]**2)
-
-    if vo_length == 0:
-        return point_v  # 如果VO长度为0，则无法计算
-
-    # 计算单位向量VO
-    vo_unit = [vo_vector[0]/vo_length, vo_vector[1]/vo_length]
-
-    # 计算向量VA和VB
-    va_vector = [point_a[0] - point_v[0], point_a[1] - point_v[1]]
-    vb_vector = [point_b[0] - point_v[0], point_b[1] - point_v[1]]
-
-    # 计算VA和VB在VO方向上的投影长度
-    va_proj = va_vector[0]*vo_unit[0] + va_vector[1]*vo_unit[1]
-    vb_proj = vb_vector[0]*vo_unit[0] + vb_vector[1]*vo_unit[1]
-
-    # 计算理想位置：在VO方向上移动，使得两个角度相等
-    # 使用简单的线性插值方法
-    ideal_proj = (va_proj + vb_proj) / 2.0
-
-    # 计算理想位置
-    ideal_x = point_v[0] + vo_unit[0] * ideal_proj
-    ideal_y = point_v[1] + vo_unit[1] * ideal_proj
-
-    return [ideal_x, ideal_y]
-
-def calculate_equal_angle_target_last(point_v, point_o, point_a, point_b, angle_AVO, angle_BVO):
-    """
-    计算使两个角度相等的目标点
-    """
-    # 方法1: 角平分线法
-    if angle_AVO < angle_BVO:
-        # 向A方向移动，增大∠AVO
-        direction_vector = [
-            (point_a[0] - point_v[0]) + (point_o[0] - point_v[0]),
-            (point_a[1] - point_v[1]) + (point_o[1] - point_v[1])
-        ]
-    else:
-        # 向B方向移动，增大∠BVO
-        direction_vector = [
-            (point_b[0] - point_v[0]) + (point_o[0] - point_v[0]),
-            (point_b[1] - point_v[1]) + (point_o[1] - point_v[1])
-        ]
-
-    # 归一化方向向量
-    length = math.sqrt(direction_vector[0]**2 + direction_vector[1]**2)
-    if length > 0:
-        direction_vector = [direction_vector[0]/length, direction_vector[1]/length]
-
-    # 基于角度差计算移动距离
-    angle_diff = abs(angle_AVO - angle_BVO)
-    move_distance = angle_diff * 0.5  # 可调整系数
-
-    # 计算目标点
-    target_x = point_v[0] + direction_vector[0] * move_distance
-    target_y = point_v[1] + direction_vector[1] * move_distance
-
-    return [target_x, target_y]
-
-
-def is_move_safe(edge_cell1, edge_cell2, point_v, point_o, move_point):
-    # """
-    # 检查移动是否安全
-    # """
-    # # 检查顶点角度安全性
-    # idx_v1 = edge_cell1.points.index(point_v)
-    # idx_o1 = edge_cell1.points.index(point_o)
-    # idx_v2 = edge_cell2.points.index(point_v)
-    # idx_o2 = edge_cell2.points.index(point_o)
-
-    # if not (is_vertex_angle_safe(edge_cell1, idx_v1, move_point) and
-    #         is_vertex_angle_safe(edge_cell1, idx_o1, move_point) and
-    #         is_vertex_angle_safe(edge_cell2, idx_v2, move_point) and
-    #         is_vertex_angle_safe(edge_cell2, idx_o2, move_point)):
-    #     return False
-
-    # # 检查边缘退火几何约束
-    # if judge_edge_if_annealing(point_v, point_o, edge_cell1, edge_cell2, move_point) <= 0:
-    #     return False
-
-    return True
-
-
-def get_marginal_move_point_test_default(cb, annealing_rate, cells):
-    """
-    基于角度判断的边缘退火移动函数
-    将边缘顶点V沿较小边缘角的边缘边移动，使得两个边缘角相等
-    """
-    # 获取三个细胞共享的交汇点O
-    point_o = cb.cell1.points[cb.index1]
-
-    # 识别两个边缘细胞
-    if cb.cell1.layer != 1:
-        edge_cell1 = cb.cell2
-        edge_cell2 = cb.cell3
-    elif cb.cell2.layer != 1:
-        edge_cell1 = cb.cell1
-        edge_cell2 = cb.cell3
-    elif cb.cell3.layer != 1:
-        edge_cell1 = cb.cell1
-        edge_cell2 = cb.cell2
-    else:
-        return 0  # 如果退火细胞块全是边缘细胞，则不进行退火操作
-
-    # 寻找两个边缘细胞共享的顶点V
-    point_v = None
-    for p in edge_cell1.points:
-        if p in edge_cell2.points and p != point_o:
-            point_v = p
-            break
-
-    if point_v is None:
-        return 0
-
-    # 验证该顶点确实是边缘顶点（被不超过2个细胞共享）
-    flag_count = 0
-    for c in cells:
-        for p in c.points:
-            if p == point_v:
-                flag_count += 1
-    if flag_count > 2:
-        return -1  # 内部顶点，不进行边缘退火
-
-    # 确定相邻顶点A和B
-    if edge_cell1.points.index(point_v) - edge_cell1.points.index(point_o) > 0 and \
-       edge_cell1.points.index(point_v) + 1 < len(edge_cell1.points):
-        if edge_cell1.points.index(point_v) + 1 >= len(edge_cell1.points):
-            point_a = edge_cell1.points[0]  # 循环到起点
-        else:
-            point_a = edge_cell1.points[edge_cell1.points.index(point_v) + 1]
-        point_b = edge_cell2.points[edge_cell2.points.index(point_v) - 1]
-    else:
-        if edge_cell2.points.index(point_v) + 1 >= len(edge_cell2.points):
-            point_b = edge_cell2.points[0]
-        else:
-            point_b = edge_cell2.points[edge_cell2.points.index(point_v) + 1]
-        point_a = edge_cell1.points[edge_cell1.points.index(point_v) - 1]
-
-    # 计算当前两个边缘角
-    angle_AVO = get_angle_by_three_point([point_a, point_v, point_o])
-    angle_BVO = get_angle_by_three_point([point_b, point_v, point_o])
-    #print("当前两个边缘角：", angle_AVO, angle_BVO)
-    # 检查角度是否已经接近相等（设置容差）
-    angle_tolerance = 0.01  # 弧度，约0.57度
-    if abs(angle_AVO - angle_BVO) < angle_tolerance:
-        return 0  # 角度已经基本相等，不需要移动
-
-    # 计算角度差
-    angle_diff = abs(angle_AVO - angle_BVO)
-
-    # 确定移动方向：向较小角度的方向移动
-    if angle_AVO < angle_BVO:
-        # 向A移动，增大∠AVO，减小∠BVO
-        #print("向A移动")
-        target_point = point_a
-    else:
-        # 向B移动，减小∠AVO，增大∠BVO
-        target_point = point_b
-        #print("向B移动")
-    # 计算移动向量
-    move_vector = [target_point[0] - point_v[0], target_point[1] - point_v[1]]
-    #print("移动向量：", move_vector)
-    # 归一化移动向量（转换为单位向量）
-    vector_length = math.sqrt(move_vector[0]**2 + move_vector[1]**2)
-    if vector_length > 0:
-        unit_vector = [move_vector[0]/vector_length, move_vector[1]/vector_length]
-    else:
-        return 0  # 点重合，无法移动
-    #print   ("单位向量：", unit_vector)
-    # 根据角度差和退火速率调整移动距离
-    move_distance = angle_diff * annealing_rate
-
-    # 计算新位置
-    xg = point_v[0] + unit_vector[0] * move_distance
-    yg = point_v[1] + unit_vector[1] * move_distance
-    point_move_v = [xg, yg]
-
-    # 应用退火速率，计算最终移动点
-    point_move_v_fin = get_point_of_destination(
-        edge_cell1.points[edge_cell1.points.index(point_v)],
-        Point(point_move_v[0], point_move_v[1]),
-        annealing_rate
-    )
-    point_move_v_fin = [point_move_v_fin.x, point_move_v_fin.y]
-    #print("point_move_v_fin", point_move_v_fin)
-    # 检查移动是否满足几何约束
-    # 检查四个顶点角的安全性
-    idx_v1 = edge_cell1.points.index(point_v)
-    idx_o1 = edge_cell1.points.index(point_o)
-    idx_v2 = edge_cell2.points.index(point_v)
-    idx_o2 = edge_cell2.points.index(point_o)
-    #print("边缘退火条件检查")
-    # if not (is_vertex_angle_safe(edge_cell1, idx_v1, point_move_v_fin) and
-    #         is_vertex_angle_safe(edge_cell1, idx_o1, point_move_v_fin) and
-    #         is_vertex_angle_safe(edge_cell2, idx_v2, point_move_v_fin) and
-    #         is_vertex_angle_safe(edge_cell2, idx_o2, point_move_v_fin)):
-    #     return 0  # 顶点角安全检查失败
-    #print("边缘退火条件检查成功")
-    # 检查边缘退火条件
-    if judge_edge_if_annealing(point_v, point_o, edge_cell1, edge_cell2, point_move_v_fin) > 0:
-        # 移动点
-        edge_cell1.points[edge_cell1.points.index(point_v)] = point_move_v_fin
-        edge_cell2.points[edge_cell2.points.index(point_v)] = point_move_v_fin
-        print("边缘退火移动完成，新位置:", point_move_v_fin)
-        return 1
-    else:
-        print("边缘退火移动被拒绝，不满足几何约束")
-        return 0
-
-
-def get_marginal_move_point_last(cb, annealing_rate, cells):
-    """
-    基于角度判断的边缘退火移动函数
-    将边缘顶点V沿较小边缘角的边缘边移动，使得两个边缘角相等
-    """
-    # 获取三个细胞共享的交汇点O
-    point_o = cb.cell1.points[cb.index1]
-
-    # 识别两个边缘细胞
-    if cb.cell1.layer != 1:
-        edge_cell1 = cb.cell2
-        edge_cell2 = cb.cell3
-    elif cb.cell2.layer != 1:
-        edge_cell1 = cb.cell1
-        edge_cell2 = cb.cell3
-    elif cb.cell3.layer != 1:
-        edge_cell1 = cb.cell1
-        edge_cell2 = cb.cell2
-    else:
-        return 0
-
-    # 寻找两个边缘细胞共享的顶点V
-    point_v = None
-    for p in edge_cell1.points:
-        if p in edge_cell2.points and p != point_o:
-            point_v = p
-            break
-
-    if point_v is None:
-        return 0
-
-    # 验证该顶点确实是边缘顶点
-    flag_count = 0
-    for c in cells:
-        for p in c.points:
-            if p == point_v:
-                flag_count += 1
-    if flag_count > 2:
-        return -1
-
-    # 确定相邻顶点A和B
-    if edge_cell1.points.index(point_v) - edge_cell1.points.index(point_o) > 0 and \
-       edge_cell1.points.index(point_v) + 1 < len(edge_cell1.points):
-        if edge_cell1.points.index(point_v) + 1 >= len(edge_cell1.points):
-            point_a = edge_cell1.points[0]
-        else:
-            point_a = edge_cell1.points[edge_cell1.points.index(point_v) + 1]
-        point_b = edge_cell2.points[edge_cell2.points.index(point_v) - 1]
-    else:
-        if edge_cell2.points.index(point_v) + 1 >= len(edge_cell2.points):
-            point_b = edge_cell2.points[0]
-        else:
-            point_b = edge_cell2.points[edge_cell2.points.index(point_v) + 1]
-        point_a = edge_cell1.points[edge_cell1.points.index(point_v) - 1]
-
-    # 计算当前两个边缘角
-    angle_AVO = get_angle_by_three_point([point_a, point_v, point_o])
-    angle_BVO = get_angle_by_three_point([point_b, point_v, point_o])
-
-    # 检查角度是否已经接近相等
-    angle_tolerance = 0.01
-    if abs(angle_AVO - angle_BVO) < angle_tolerance:
-        return 0
-
-    # 计算角度差
-    angle_diff = abs(angle_AVO - angle_BVO)
-
-    # 确定移动方向：向较小角度的方向移动
-    if angle_AVO < angle_BVO:
-        target_point = point_a
-    else:
-        target_point = point_b
-
-    # 计算移动向量
-    move_vector = [target_point[0] - point_v[0], target_point[1] - point_v[1]]
-
-    # 归一化移动向量
-    vector_length = math.sqrt(move_vector[0]**2 + move_vector[1]**2)
-    if vector_length > 0:
-        unit_vector = [move_vector[0]/vector_length, move_vector[1]/vector_length]
-    else:
-        return 0
-
-    # 根据角度差和退火速率调整移动距离
-    move_distance = angle_diff * annealing_rate
-
-    # 计算新位置
-    xg = point_v[0] + unit_vector[0] * move_distance
-    yg = point_v[1] + unit_vector[1] * move_distance
-    point_move_v = [xg, yg]
-
-    # 应用退火速率，计算最终移动点
-    point_move_v_fin = get_point_of_destination(
-        edge_cell1.points[edge_cell1.points.index(point_v)],
-        Point(point_move_v[0], point_move_v[1]),
-        annealing_rate
-    )
-    point_move_v_fin = [point_move_v_fin.x, point_move_v_fin.y]
-
-    # 检查移动是否满足几何约束
-    if judge_edge_if_annealing(point_v, point_o, edge_cell1, edge_cell2, point_move_v_fin) > 0:
-        # 移动点
-        edge_cell1.points[edge_cell1.points.index(point_v)] = point_move_v_fin
-        edge_cell2.points[edge_cell2.points.index(point_v)] = point_move_v_fin
-        return 1
-    else:
-        return 0
-
-def calculate_ideal_target_point(point_v, point_o, point_a, point_b, angle_AVO, angle_BVO):
-    """
-    计算理想目标点（使两个边缘角相等的点）
-    这是一个独立的辅助函数
-    """
-    # 方法2: 数值优化（更精确）
-    def angle_difference_func(new_v):
-        new_angle_AVO = get_angle_by_three_point([point_a, new_v, point_o])
-        new_angle_BVO = get_angle_by_three_point([point_b, new_v, point_o])
-        return abs(new_angle_AVO - new_angle_BVO)
-
-    # 使用优化算法找到使角度差最小的点
-    from scipy.optimize import minimize
-    result = minimize(angle_difference_func, point_v, method='BFGS')
-    ideal_point = result.x
-
-    distance = get_distance_point_point(point_v, ideal_point)
-    return distance
-def is_O_vertex_safe(cell_O, index_O, candidate_V):
-    """
-    以 O 为中心点，检查 O 与它的3个相邻点组成的三个角是否 >= 180°。
-
-    cell_O : 包含 O 的 cell 对象
-    index_O: O 在 cell 内的索引
-    candidate_V : 移动后的 V 的坐标 [x, y]
-    """
-
-    # 复制一次 cell_O 的顶点
-    try:
-        pts = [p.copy() for p in cell_O.points]
-    except:
-        pts = [list(p) for p in cell_O.points]
-
-    # O 的坐标
-    Ox, Oy = pts[index_O]
-
-    # 3 个相邻点：左、右、移动后的 V（与 cell edge 拥有公共边）
-    n = len(pts)
-    def P(i):
-        return pts[i % n]
-
-    leftP  = P(index_O - 1)
-    rightP = P(index_O + 1)
-    Vp     = candidate_V  # 替换为移动后的 V
-
-    # 计算三个角
-    angle_AOV = get_angle_by_three_point([leftP,  (Ox, Oy), Vp])
-    angle_VOB = get_angle_by_three_point([Vp,     (Ox, Oy), rightP])
-    angle_AOB = get_angle_by_three_point([leftP,  (Ox, Oy), rightP])
-
-    # 检查是否 >= 180°
-    if angle_AOV >= math.pi - 1e-9:
-        print("[O-Check-STOP] 角 A-O-V >=180°，取消退火")
-        return False
-
-    if angle_VOB >= math.pi - 1e-9:
-        print("[O-Check-STOP] 角 V-O-B >=180°，取消退火")
-        return False
-
-    if angle_AOB >= math.pi - 1e-9:
-        print("[O-Check-STOP] 角 A-O-B >=180°，取消退火")
-        return False
-
-    return True
-
-# def is_vertex_angle_safe(angle_AVO,angle_BVO,point_a):
-#     # 检查角度是否已经接近相等（设置容差）
-#     angle_tolerance = 0.01  # 弧度，约0.57度
-#     if abs(angle_AVO - angle_BVO) < angle_tolerance:
-#         return 0  # 角度已经基本相等，不需要移动
-
-#     # 计算角度差
-#     angle_diff = abs(angle_AVO - angle_BVO)
-
-#     # 确定移动方向：向较小角度的方向移动
-#     if angle_AVO < angle_BVO:
-#         #move_direction = "A"  # 向A移动，增大∠AVO，减小∠BVO
-#         target_point = point_a
-#     else:
-#         #move_direction = "B"  # 向B移动，减小∠AVO，增大∠BVO
-#         target_point = point_b
-
-#     # 计算移动向量
-#     move_vector = [target_point[0] - point_v[0], target_point[1] - point_v[1]]
-
-#     # 归一化移动向量（转换为单位向量）
-#     vector_length = math.sqrt(move_vector[0]**2 + move_vector[1]**2)
-#     if vector_length > 0:
-#         unit_vector = [move_vector[0]/vector_length, move_vector[1]/vector_length]
-#     else:
-#         return 0  # 点重合，无法移动
-
-#     # 根据角度差和退火速率调整移动距离
-#     move_distance = angle_diff * annealing_rate
-#     #move_distance = angle_diff * annealing_rate * 0.5  # 乘以0.5避免过度移动
-
-#     # 计算新位置
-#     xg = point_v[0] + unit_vector[0] * move_distance
-#     yg = point_v[1] + unit_vector[1] * move_distance
-#     point_move_v = [xg, yg]
-
-#     # 应用退火速率，计算最终移动点
-#     point_move_v_fin = get_point_of_destination(
-#         edge_cell1.points[edge_cell1.points.index(point_v)],
-#         Point(point_move_v[0], point_move_v[1]),
-#         annealing_rate
-#     )
-#     point_move_v_fin = [point_move_v_fin.x, point_move_v_fin.y]
-
-#     # 检查移动是否满足几何约束
-#     idx_v1 = edge_cell1.points.index(point_v)
-#     idx_o1 = edge_cell1.points.index(point_o)
-#     idx_v2 = edge_cell2.points.index(point_v)
-#     idx_o2 = edge_cell2.points.index(point_o)
-#     if not (is_vertex_angle_safe(edge_cell1, idx_v1, point_move_v_fin) and
-#             is_vertex_angle_safe(edge_cell1, idx_o1, point_move_v_fin) and
-#             is_vertex_angle_safe(edge_cell2, idx_v2, point_move_v_fin) and
-#             is_vertex_angle_safe(edge_cell2, idx_o2, point_move_v_fin)):
-#         return 0
-#     if judge_edge_if_annealing(point_v, point_o, edge_cell1, edge_cell2, point_move_v_fin) > 0:
-#         # 移动点
-#         edge_cell1.points[edge_cell1.points.index(point_v)] = point_move_v_fin
-#         edge_cell2.points[edge_cell2.points.index(point_v)] = point_move_v_fin
-#         print("边缘退火移动完成，新位置:", point_move_v_fin)
-#         return 1
-#     else:
-#         print("边缘退火移动被拒绝，不满足几何约束")
-#         return 0
-
-def get_innear_point(cb, annealing_rate, cells):
-        # 1. 计算重心点 - 内部退火的目标点
-    point_g = cb.getTriCentreOfGravity()
-
-    # 2. 计算移动目标点 - 基于当前点和重心点
-    move_point = get_point_of_destination(cb.cell1.points[cb.index1], point_g, annealing_rate)
-
-    # 3. 退火可行性判断
-    flag_index = judge_if_annealing(cb, move_point)
-
-    # 4. 根据判断结果处理
-    if flag_index == 0:  # 可以退火
-        move_flag = True
-    elif flag_index == -1:
-        best_count += 1      # 已接近最优，无需退火
-    elif flag_index == -2:
-        need_not_count += 1  # 不需要退火
-    elif flag_index == -3:
-        judge_180_count += 1 # 不满足凸多边形约束
-    elif flag_index == -4:
-        judge_inner_angle_count += 1 # 内角平方和会增大
-
-    # 5. 如果判断可以退火，执行顶点更新
-    if move_flag:
-        # 更新三个共享顶点的细胞坐标
-        cb.cell1.points[cb.index1] = [move_point.x, move_point.y]
-        cb.cell2.points[cb.index2] = [move_point.x, move_point.y]
-        cb.cell3.points[cb.index3] = [move_point.x, move_point.y]
-
-        # 更新细胞的几何属性
-        cb.cell1.setVertex()
-        cb.cell2.setVertex()
-        cb.cell3.setVertex()
-
-'''
-    退火移动方法（核心方法之一）
-    Annealing moving method (one of core methods)
-    :param intersection_cell_blocks: 退火细胞块列表 Annealed cell block list
-    :param flag: 奇偶转换器  Parity converter
-    :return annealing_count: 实际退火的细胞块总数 Total number of cell blocks actually annealed
-'''
-def calculate_ideal_target_point(cb, cells):
-    """
-    计算边缘细胞的理想目标点（使两个边缘角相等的点）
-    基于新的边缘退火算法逻辑
-    """
-    # 获取三个细胞共享的交汇点O
-    point_o = cb.cell1.points[cb.index1]
-
-    # 识别两个边缘细胞
-    if cb.cell1.layer != 1:
-        edge_cell1 = cb.cell2
-        edge_cell2 = cb.cell3
-    elif cb.cell2.layer != 1:
-        edge_cell1 = cb.cell1
-        edge_cell2 = cb.cell3
-    elif cb.cell3.layer != 1:
-        edge_cell1 = cb.cell1
-        edge_cell2 = cb.cell2
-    else:
-        # 如果退火细胞块全是边缘细胞，返回当前点（不移动）
-        return Point(point_o[0], point_o[1])
-
-    # 寻找两个边缘细胞共享的顶点V（不是交汇点O）
-    point_v = None
-    for p in edge_cell1.points:
-        if p in edge_cell2.points and p != point_o:
-            point_v = p
-            break
-
-    if point_v is None:
-        print("错误：找不到共享顶点V")
-        return Point(point_o[0], point_o[1])
-
-    # 确定相邻顶点A和B
-    if edge_cell1.points.index(point_v) - edge_cell1.points.index(point_o) > 0 and \
-       edge_cell1.points.index(point_v) + 1 < len(edge_cell1.points):
-        if edge_cell1.points.index(point_v) + 1 >= len(edge_cell1.points):
-            point_a = edge_cell1.points[0]
-        else:
-            point_a = edge_cell1.points[edge_cell1.points.index(point_v) + 1]
-        point_b = edge_cell2.points[edge_cell2.points.index(point_v) - 1]
-    else:
-        if edge_cell2.points.index(point_v) + 1 >= len(edge_cell2.points):
-            point_b = edge_cell2.points[0]
-        else:
-            point_b = edge_cell2.points[edge_cell2.points.index(point_v) + 1]
-        point_a = edge_cell1.points[edge_cell1.points.index(point_v) - 1]
-
-    # 计算当前两个边缘角
-    angle_AVO = get_angle_by_three_point([point_a, point_v, point_o])
-    angle_BVO = get_angle_by_three_point([point_b, point_v, point_o])
-
-    # 检查角度是否已经接近相等
-    angle_tolerance = 0.01  # 弧度，约0.57度
-    if abs(angle_AVO - angle_BVO) < angle_tolerance:
-        return Point(point_v[0], point_v[1])  # 角度已经基本相等，返回当前点
-
-    # 使用角平分线法计算理想目标点（比数值优化更快，适合排序）
-    return calculate_target_by_angle_bisector(point_v, point_o, point_a, point_b, angle_AVO, angle_BVO)
-
-def calculate_target_by_angle_bisector(point_v, point_o, point_a, point_b, angle_AVO, angle_BVO):
-    """
-    使用角平分线法计算使两个边缘角相等的目标点
-    """
-    # 计算向量VO, VA, VB
-    vo_vector = [point_o[0] - point_v[0], point_o[1] - point_v[1]]
-    va_vector = [point_a[0] - point_v[0], point_a[1] - point_v[1]]
-    vb_vector = [point_b[0] - point_v[0], point_b[1] - point_v[1]]
-
-    # 计算单位向量
-    def normalize(vector):
-        length = math.sqrt(vector[0]**2 + vector[1]**2)
-        if length > 0:
-            return [vector[0]/length, vector[1]/length]
-        return vector
-
-    vo_unit = normalize(vo_vector)
-    va_unit = normalize(va_vector)
-    vb_unit = normalize(vb_vector)
-
-    # 计算角平分线方向（向量加法）
-    if angle_AVO < angle_BVO:
-        # 向A方向移动，使∠AVO增大
-        bisector_direction = [
-            va_unit[0] + vo_unit[0],
-            va_unit[1] + vo_unit[1]
-        ]
-    else:
-        # 向B方向移动，使∠BVO增大
-        bisector_direction = [
-            vb_unit[0] + vo_unit[0],
-            vb_unit[1] + vo_unit[1]
-        ]
-
-    # 归一化角平分线方向
-    bisector_unit = normalize(bisector_direction)
-
-    # 计算移动距离（基于角度差）
-    angle_diff = abs(angle_AVO - angle_BVO)
-    move_distance = angle_diff * 0.5  # 经验系数
-
-    # 计算目标点
-    target_x = point_v[0] + bisector_unit[0] * move_distance
-    target_y = point_v[1] + bisector_unit[1] * move_distance
-
-    return Point(target_x, target_y)
-
-def is_vertex_angle_safe_02(cell, index, candidate):
-    """
-    检查一次虚拟的顶点移动是否会导致细胞内角大于180度。
-    这会检查被移动顶点自身，以及其左右两个邻居顶点的角度。
-    """
-    temp_points = [p.copy() for p in cell.points]
-    temp_points[index] = candidate
-
-    l = len(temp_points)
-
-    # 检查点索引-1, 索引, 索引+1的三个角度
-    for i in range(-1, 2):
-        vertex_index_to_check = (index + i + l) % l
-
-        p_prev = temp_points[(vertex_index_to_check - 1 + l) % l]
-        p_curr = temp_points[vertex_index_to_check]
-        p_next = temp_points[(vertex_index_to_check + 1) % l]
-
-        angle = get_angle_by_three_point([p_prev, p_curr, p_next])
-
-        # 如果任何一个角度大于或等于180度，则认为是不安全的移动
-        if angle >= math.pi - 1e-9:
-            return False
-
-    return True
-
-def move_point(intersection_cell_blocks, annealing_rate, edge_judge, flag, cells):
+def move_point(intersection_cell_blocks, annealing_rate, marginal_point_judge, cells):
     """
     退火移动函数（统一队列版）：
     1. 统一收集 marginal points（边缘顶点）和 inner points（内部顶点）
@@ -4106,7 +1471,6 @@ def move_point(intersection_cell_blocks, annealing_rate, edge_judge, flag, cells
     count = 0  # 待退火细胞块总数 Total number of cell blocks to be annealed
     now_count = 0  # 当前待退火细胞块总数 Total number of cell blocks to be returned
     marginal_count = 0  # 边缘细胞块总数 Total number of marginal cell blocks
-    need_not_count = 0  # 不需要退火细胞块总数 Total number of cell blocks not required to be annealed
     best_count = 0  # 接近最优退火细胞块总数 The total number of cell blocks was close to the optimal annealing
     judge_180_count = 0  # 退火后不满足凸多边形的细胞块总数 Total number of cell blocks not meeting convex polygon after annealing
     judge_inner_angle_count = 0  # 退火后内角平方和会增大的细胞块总数 The total number of cell blocks increased after annealing
@@ -4114,7 +1478,7 @@ def move_point(intersection_cell_blocks, annealing_rate, edge_judge, flag, cells
     inner_annealing_points = 0
 
     # 如果边缘退火开启，输出一次所有边缘顶点信息
-    if edge_judge:
+    if marginal_point_judge:
         all_marginal_points = get_all_marginal_points(cells)
         print(f"[MarginalPoints] 全部边缘顶点个数: {len(all_marginal_points)}")
         print(f"[MarginalPoints] 边缘顶点坐标列表:")
@@ -4127,7 +1491,7 @@ def move_point(intersection_cell_blocks, annealing_rate, edge_judge, flag, cells
     vertex_queue = []
 
     # 收集 marginal points（边缘顶点）
-    if edge_judge:
+    if marginal_point_judge:
         all_marginal_points = get_all_marginal_points(cells)
         for point_v in all_marginal_points:
             D = calculate_marginal_annealing_distance(point_v, cells)
@@ -4186,9 +1550,6 @@ def move_point(intersection_cell_blocks, annealing_rate, edge_judge, flag, cells
                 inner_annealing_points += 1
             elif flag_index == -1:
                 best_count += 1
-            elif flag_index == -2:
-                need_not_count += 1
-                print("need_not_count:", need_not_count)
             elif flag_index == -3:
                 judge_180_count += 1
                 print("judge_180_count:", judge_180_count)
@@ -4217,7 +1578,7 @@ def move_point(intersection_cell_blocks, annealing_rate, edge_judge, flag, cells
     ))
 
     # 与 AnnealingGUI.Annealer 约定：元组第二项为内外退火顶点数，供统计面板等使用
-    annealing_count = now_count - marginal_count - need_not_count - best_count - judge_180_count - judge_inner_angle_count
+    annealing_count = now_count - marginal_count - best_count - judge_180_count - judge_inner_angle_count
     stats = {
         'marginal_points': marginal_annealing_points,
         'inner_points': inner_annealing_points,

@@ -12,40 +12,47 @@
 - Xu K., Weng L., Wang Z., Lian Y., Huang B. (2026). *A symmetric relaxation method for entire two-dimensional cellular networks and its implications*. (arXiv: XuSR20260616)
 - Xu K. (2021). *A geometry-based relaxation algorithm for equilibrating a trivalent polygonal network in two dimensions and its implications*. Philosophical Magazine, 101(14), 1632-1653.
 
----
+***
 
 ## 功能特性
 
 ### 维诺图生成
+
 生成修剪的 Voronoi 网络：
+
 - **随机扰动 (n×n)** — 随机扰动正六边形网格的种子点坐标，扰动（菱形采样法）范围限定在正六边形内，参数 *k* 控制不规则度（0=正六边形，1=高度无序）。
 - **均匀随机** — 基于均匀随机点。
 
 ### 对称松弛（退火）
+
 通过几何对称性平衡内部顶点和边缘顶点：
 
-- **内部顶点** — 由关联细胞的中心角对称性驱动，可选内角对称（即内角倾向于120°）。
+- **内部顶点** — 由关联细胞的中心角对称性驱动，可选内角对称限制（即内角倾向于120°）。
 - **边缘顶点** — 沿边界边移动，目标边缘角度 90°；也受中心角对称影响。
 - **可配置** — 退火因子（可看作顶点移动速度）、边缘顶点参与开关、内角平方和守卫。
 
 ### 椭圆拟合
-- **R-LMG**（`conicfit` 包）— 高精度几何拟合，优先用于三角形/四边形。
-- **代数最小二乘**（numpy SVD）— 快速拟合，适用于五边及以上的多边形。
-- 根据拟合质量（面积比 ≤ 5）自动切换算法。
+
+- **R-LMG**（`conicfit` 包）— 高精度几何拟合，三角形/四边形的首选方法。
+- **代数最小二乘**（numpy SVD）— 快速拟合，五边及以上的首选方法。
+- 要求椭圆和n边形的面积比值在1和3之间，首选失败则用代数法基于真实点+镜像点（共2n）拟合；次选失败则用R-LMG基于真实点+镜像点（共2n）拟合；还失败则用基于真实点+镜像点（共2n）的保底最小外接矩形MBR。
 
 ### 数据导出
+
 导出为 Excel（`.xlsx`）：
+
 - **椭圆及细胞周长和面积** — 中心点、长短半轴、短半轴角度、细胞周长、细胞面积、细胞层数（最外层边缘细胞的层数为1，从外往内依次加1）。
 - **边角数据** — 每个顶点的内角、邻边长度。
 - **ME/MA 统计** — 边缘细胞的边缘边长和边缘角。
 
 ### 可视化
+
 - 实时细胞网络显示，按层数着色。
 - 最优射线叠加显示形心和顶点连线，以及每个顶点对应的三条射线组成的三角形。
 - 椭圆叠加显示拟合结果。
 - 图片导出为 EPS（矢量图）和 PNG。
 
----
+***
 
 ## 环境要求
 
@@ -54,24 +61,27 @@
 - **R** 语言环境（用于 R-LMG 椭圆拟合，通过 `rpy2` 调用），可选但推荐
 - R 包：`conicfit`、`sp`、`shotGroups`
 
----
+***
 
 ## 安装
 
 ### 一键安装
 
 **Windows：**
+
 ```bash
 setup.bat
 ```
 
 **Linux / macOS：**
+
 ```bash
 chmod +x setup.sh
 ./setup.sh
 ```
 
 脚本将自动：
+
 1. 检查 Python 安装。
 2. 通过 `pip install -r requirements.txt` 安装所有 Python 包。
 3. 检测 `R_Dist/` 便携版目录并配置。
@@ -113,7 +123,7 @@ pyinstaller --onefile --windowed --name "CellAnnealing" ^
 
 > 打包后将 `R_Dist/` 放在 exe 同目录下即可启用 R-LMG 拟合。
 
----
+***
 
 ## 文件结构
 
@@ -150,23 +160,23 @@ only_annealing/
     └── layerMarker.py          # 细胞层数标记
 ```
 
----
+***
 
 ## R 环境配置
 
 `setup.bat` / `setup.sh` 按以下优先级处理 R 环境：
 
-| 优先级 | 来源 | 检测方式 |
-|---|---|---|
-| 1（最佳） | 系统 R | `R_HOME` 环境变量或 `R` 在 PATH 中 |
-| 2 | 便携版 `R_Dist/` | 本地存在 `R_Dist/bin/R` |
-| 3（保底） | 自动下载 | 脚本自动下载安装 R |
+| 优先级   | 来源            | 检测方式                        |
+| ----- | ------------- | --------------------------- |
+| 1（最佳） | 系统 R          | `R_HOME` 环境变量或 `R` 在 PATH 中 |
+| 2     | 便携版 `R_Dist/` | 本地存在 `R_Dist/bin/R`         |
+| 3（保底） | 自动下载          | 脚本自动下载安装 R                  |
 
 无 R 环境时，椭圆拟合自动降级为纯 Python（numpy/scipy 最小二乘），功能不受影响，但对三角形/四边形的拟合精度可能略有不同。
 
 > **注意：** `R_Dist/` 已加入 `.gitignore`，不会上传到 Git。克隆后运行 `setup.bat` 即可自动配置，或从完整分发版复制 `R_Dist/`。
 
----
+***
 
 ## 使用说明
 
@@ -177,6 +187,7 @@ python only_annealing_main.py
 ```
 
 GUI 提供以下功能：
+
 1. **维诺图初始化** — 配置网络类型和参数，生成初始网络。
 2. **退火** — 设置退火速率、边缘顶点是否参与、内角平方和守卫，执行单次或多次迭代。
 3. **最优射线** — 显示最优射线，叠加显示形心和顶点连线，以及每个顶点对应的三条射线组成的三角形。
@@ -184,7 +195,7 @@ GUI 提供以下功能：
 5. **数据导出** — 将多边形几何和拓扑参数数据保存为三个 Excel文件。
 6. **图片导出** — 通过 matplotlib 工具栏保存当前视图为 EPS 或 PNG。
 
----
+***
 
 ## 引用
 
@@ -200,28 +211,32 @@ trivalent polygonal network in two dimensions and its implications.
 Philosophical Magazine, 101(14), 1632-1653.
 ```
 
----
+***
 
 ## 许可证
 
 本项目采用 MIT 许可证 — 详见 [LICENSE](LICENSE) 文件。
 
----
+***
 
 ## 贡献者
 
 ### 项目负责人 & 核心算法设计
+
 - **许凯 (Kai Xu)** — 项目发起人，所有核心算法的设计师，代码架构规划与设计。在 Trae 协助下开发了中英文双语 GUI。
 
 ### 核心技术贡献者
+
 - **史国威 (Guowei Shi)** — 实现了初始基础代码和原始模拟退火原型。
 - **翁力凡 (Lifan Weng)、王子涵 (Zihan Wang)、连钰洋 (Yuyang Lian)、黄斌 (Bin Huang)** — 进行了后续代码重构、计算性能优化、GUI功能改进和补充国际化支持。
 
----
+***
 
 ## 联系方式
 
 **许凯 (Kai Xu)**
-- 邮箱: kaixu@jmu.edu.cn / kxu2013@gmail.com
+
+- 邮箱: <kaixu@jmu.edu.cn> / <kxu2013@gmail.com>
 - ORCID: [0000-0002-1341-1525](https://orcid.org/0000-0002-1341-1525)
 - 单位: 集美大学 水产学院
+

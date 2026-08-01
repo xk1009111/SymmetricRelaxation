@@ -806,7 +806,7 @@ class AnnealingGUI:
             try:
                 anneal_params = {
                     'annealingRate': float(self.anneal_rate.get()),
-                    'edge_judge': int(self.anneal_edge.get()),
+                    'marginal_point_judge': int(self.anneal_edge.get()),
                     'inner_angle_sq_guard': int(self.anneal_inner_angle_guard.get())
                 }
                 annealer = Annealer(anneal_params)
@@ -858,7 +858,7 @@ class AnnealingGUI:
         try:
             anneal_params = {
                 'annealingRate': float(rate_str),
-                'edge_judge': int(edge_str),
+                'marginal_point_judge': int(edge_str),
                 'inner_angle_sq_guard': int(self.anneal_inner_angle_guard.get())
             }
             annealer = Annealer(anneal_params)
@@ -966,7 +966,7 @@ class AnnealingGUI:
         directory = os.path.dirname(file_path) or os.getcwd()
         base_name = os.path.splitext(os.path.basename(file_path))[0] or "export"
         timestamp = int(time.time())
-        edge_judge = getattr(annealer, 'edge_judge', 1) if annealer else 1
+        marginal_point_judge = getattr(annealer, 'marginal_point_judge', 1) if annealer else 1
 
         try:
             ignore = int(float(param2)) if param2 is not None else 0
@@ -977,7 +977,7 @@ class AnnealingGUI:
         try:
             success = exportUtils.create(
                 "export", cellData.cells, cellData.lineOfCell,
-                edge_judge, N, ignore, currentTimes=timestamp
+                marginal_point_judge, N, ignore, currentTimes=timestamp
             )
             if not success:
                 messagebox.showerror(_('error'), _('error_export'), parent=self.root)
@@ -1204,7 +1204,7 @@ class AnnealingGUI:
                     edgecolor='black', linewidth=0.8, alpha=0.6)
 
             # 中心点
-            if cell.ok or (annealer and not annealer.edge_judge):
+            if cell.ok or (annealer and not annealer.marginal_point_judge):
                 ax.scatter(cell.center_point.x, cell.center_point.y,
                           color='black', s=20)
             else:
@@ -1269,9 +1269,9 @@ class AnnealingGUI:
         # 交汇三角形
         if show_auxiliary_lines and intersection_cell_blocks:
             try:
-                edge_judge_display = not annealer.edge_judge if annealer else True
+                marginal_point_judge_display = not annealer.marginal_point_judge if annealer else True
                 for cb in intersection_cell_blocks:
-                    if not (cb.cell1.ok or not edge_judge_display):
+                    if not (cb.cell1.ok or not marginal_point_judge_display):
                         continue
                     try:
                         point_g = cb.getTriCentreOfGravity()

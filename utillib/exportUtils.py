@@ -11,7 +11,7 @@ import utillib.i18n as i18n
 '''
     椭圆拟合数据表
 '''
-def ellipse(excelName,cells,lineOfCell, edge_judge, currentTimes, ignore, printTime=''):
+def ellipse(excelName,cells,lineOfCell, marginal_point_judge, currentTimes, ignore, printTime=''):
 
     workbook=openpyxl.Workbook()
     sheet =workbook.active
@@ -44,7 +44,7 @@ def ellipse(excelName,cells,lineOfCell, edge_judge, currentTimes, ignore, printT
 
 
         '''
-        if (not c.ok) and edge_judge:
+        if (not c.ok) and marginal_point_judge:
             continue
         '''
         sheet.cell(row=2+i,column=1,value=c.no).alignment=align
@@ -81,7 +81,7 @@ def ellipse(excelName,cells,lineOfCell, edge_judge, currentTimes, ignore, printT
     return True
 
 
-def edgeangle(excelName,cells,lineOfCell, edge_judge, currentTimes, ignore, printTime=''):
+def edgeangle(excelName,cells,lineOfCell, marginal_point_judge, currentTimes, ignore, printTime=''):
 
     workbook=openpyxl.Workbook()
     sheet =workbook.active
@@ -179,7 +179,7 @@ def appendData(excelName,lastSplitData,currentTimes):
     workbook.save(lastFile)
 
 
-def export_ME_MA_1(excelName, cells, edge_judge, currentTimes):
+def export_ME_MA_1(excelName, cells, marginal_point_judge, currentTimes):
     """
     导出 ME (边缘边长) 和 MA (边缘角) 到单独的 Excel 表格
     """
@@ -255,7 +255,7 @@ def export_ME_MA_1(excelName, cells, edge_judge, currentTimes):
     return True
 
 
-def export_ME_MA(excelName, cells, edge_judge, currentTimes):
+def export_ME_MA(excelName, cells, marginal_point_judge, currentTimes):
     """
     导出 ME (边缘边长) 和 MA (边缘角) 到单独的 Excel 表格
     按照老师要求：将一个边缘细胞的两个边缘角(MA)和一个边缘边(ME)以及层数放在一行
@@ -333,13 +333,13 @@ def export_ME_MA(excelName, cells, edge_judge, currentTimes):
     return True
 
 
-def create(excelName, cells, lineOfCell, edge_judge, N, ignore, currentTimes=0):
+def create(excelName, cells, lineOfCell, marginal_point_judge, N, ignore, currentTimes=0):
     # 依次调用三个导出函数：椭圆数据、边角数据、ME/MA数据
-    res_me_ma = export_ME_MA(excelName, cells, edge_judge, currentTimes)
+    res_me_ma = export_ME_MA(excelName, cells, marginal_point_judge, currentTimes)
 
     # 调用原有的 ellipse 和 edgeangle 函数
-    if ellipse("ellipse", cells, lineOfCell, edge_judge, currentTimes, ignore) \
-        and edgeangle("edgeAngle", cells, lineOfCell, edge_judge, currentTimes, ignore) \
+    if ellipse("ellipse", cells, lineOfCell, marginal_point_judge, currentTimes, ignore) \
+        and edgeangle("edgeAngle", cells, lineOfCell, marginal_point_judge, currentTimes, ignore) \
         and res_me_ma:
         return True
     else:

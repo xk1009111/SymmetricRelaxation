@@ -178,9 +178,10 @@ class Cell:
         nn = len(points)  # 细胞边数
         # Since the starting point and the ending point coincide in the cell class, the number of vertices existing
         # in the cell class should be the number of cell edges minus the length of the point set
-        can_shu = fittinglib.fitting(points, self.center_point, self.area)
+        # fitting() (V13.0) 直接返回几何参数 [cx, cy, a, b, theta]
+        geo = fittinglib.fitting(points, self.center_point, self.area)
 
-        data = self.make_final_ellipse(can_shu)
+        data = self.make_final_ellipse(geo)
 
         # print("拟合前后点集",self.points, points)
         add_points = []
@@ -193,15 +194,22 @@ class Cell:
         self.add_points = add_points
         return data, add_points
 
-    def make_final_ellipse(self, can_shu):
+    def make_final_ellipse(self, geo):
+        # geo 为 fitting() 返回的几何参数 [cx, cy, a, b, theta]；
+        # fitting() 已完成代数→几何转换，这里不能再调用 find_a/find_b/find_angle
+        # （那些函数期望代数参数 [B,C,D,E,F]，会把几何参数误读导致 "方程不是椭圆" 报错）
+        # geo is the geometric params [cx, cy, a, b, theta] returned by fitting();
+        # fitting() has already done the algebraic→geometric conversion, so do NOT
+        # call find_a/find_b/find_angle here (they expect algebraic params [B,C,D,E,F]
+        # and would misread geometric params, raising "方程不是椭圆").
         ellipse_data = {}  # 声明存放椭圆参数的变量 Declare the variable that holds the ellipse parameters
-        cp = fittinglib.find_center_point(can_shu)  # 获取拟合椭圆的中心点 Get the center point of fitting ellipse
-        cp = Point(cp[0], cp[1])  # 同上 ditto
-        ellipse_data['cp'] = cp  # 设置椭圆中心点 Set ellipse center point
-        ellipse_data['a'] = fittinglib.find_a(can_shu)  # 设置椭圆长半轴数据 Set ellipse long half axis data
-        ellipse_data['b'] = fittinglib.find_b(can_shu)  # 设置椭圆短半轴数据 Set ellipse minor axis data
-        ellipse_data['angle'] = fittinglib.find_angle(
-            can_shu)  # 设置椭圆与水平轴倾斜角数据 Set the data of inclination angle between ellipse and horizontal axis
+
+        cx = float(geo[0])
+        cy = float(geo[1])
+        ellipse_data['cp'] = Point(cx, cy)  # 设置椭圆中心点 Set ellipse center point
+        ellipse_data['a'] = float(geo[2])  # 设置椭圆长半轴数据 Set ellipse long half axis data
+        ellipse_data['b'] = float(geo[3])  # 设置椭圆短半轴数据 Set ellipse minor axis data
+        ellipse_data['angle'] = float(geo[4])  # 设置椭圆与水平轴倾斜角数据 Set the data of inclination angle between ellipse and horizontal axis
 
         return ellipse_data  # 返回所有椭圆数据信息 Returns all ellipse data information
 

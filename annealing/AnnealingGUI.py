@@ -2,10 +2,9 @@ import annealing.annealerUtil as util
 
 
 class Annealer:
-    """细胞退火器。负责生成每个细胞的实际线与预最优线、提取交汇细胞块并按策略移动顶点。annealingRate 为单步退火比例，edge_judge 控制是否处理边缘块，flag 用于轮次奇偶切换。"""
+    """细胞退火器。负责生成每个细胞的实际线与预最优线、提取交汇细胞块并按策略移动顶点。annealingRate 为单步退火比例，marginal_point_judge 控制是否处理边缘块。"""
     annealingRate = 0.0
-    edge_judge = False
-    flag = True
+    marginal_point_judge = False
     inner_points = 0
     marginal_points = 0
     last_inner_points = 0
@@ -17,7 +16,7 @@ class Annealer:
         初始化退火器
         :param params: 参数字典，包含以下可选键：
             - annealingRate: 退火速率 (0~1)
-            - edge_judge: 细胞块边缘是否参与退火 (True/False 或 1/0)
+            - marginal_point_judge: 细胞块边缘是否参与退火 (True/False 或 1/0)
         """
         if params is None:
             params = {}
@@ -47,13 +46,13 @@ class Annealer:
             self.inner_angle_sq_guard = True
         util.set_annealing_options(self.inner_angle_sq_guard)
 
-        edge_judge = params.get('edge_judge', 0)  # 默认不参与
-        if isinstance(edge_judge, bool):
-            self.edge_judge = edge_judge
-        elif isinstance(edge_judge, (int, str)):
-            self.edge_judge = int(edge_judge) == 1
+        marginal_point_judge = params.get('marginal_point_judge', 0)  # 默认不参与
+        if isinstance(marginal_point_judge, bool):
+            self.marginal_point_judge = marginal_point_judge
+        elif isinstance(marginal_point_judge, (int, str)):
+            self.marginal_point_judge = int(marginal_point_judge) == 1
         else:
-            self.edge_judge = False
+            self.marginal_point_judge = False
 
         print("----------------------------")
 
@@ -70,7 +69,7 @@ class Annealer:
 
         intersection_cell_blocks = util.get_intersection_cell_blocks(cells)
 
-        result = util.move_point(intersection_cell_blocks, self.annealingRate, self.edge_judge, self.flag, cells)
+        result = util.move_point(intersection_cell_blocks, self.annealingRate, self.marginal_point_judge, cells)
         self.last_inner_points = self.inner_points
         self.last_marginal_points = self.marginal_points
 
@@ -93,7 +92,6 @@ class Annealer:
             self.inner_points = 0
             self.marginal_points = 0
 
-        self.flag = not self.flag
         try:
             return int(annealing_count)
         except (TypeError, ValueError):
