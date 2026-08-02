@@ -147,114 +147,6 @@ def edgeangle(excelName,cells,lineOfCell, marginal_point_judge, currentTimes, ig
     return True
 
 
-# 将分裂情况填写到上一个文件
-# Fill in the split in the previous file
-def appendData(excelName,lastSplitData,currentTimes):
-    if currentTimes < 1:
-        print(0)
-        return
-    lastFile='{0}_{1}.xlsx'.format(excelName, currentTimes-1)
-    print(lastFile)
-    if os.path.isfile(lastFile):
-        workbook=openpyxl.load_workbook(lastFile)
-        sheet=workbook.active
-    else:
-        print(1)
-        return
-
-    sheet.cell(row=1, column=12, value="是否分裂").alignment=align
-    sheet.cell(row=1, column=13, value="子细胞比例").alignment=align
-    sheet.column_dimensions['L'].width = 15
-    sheet.column_dimensions['M'].width = 15
-
-    length = len(lastSplitData)
-    for i in range(length):
-        if lastSplitData[i][0]:
-            c=sheet.cell(row=i+2,column=12,value='Divide')
-            c.font=Font(color='ff0000')
-            sheet.cell(row=i+2,column=13,value=lastSplitData[i][1]).alignment=align
-        else :
-            c=sheet.cell(row=i+2,column=12,value='non-divide')
-        c.alignment=align
-    workbook.save(lastFile)
-
-
-def export_ME_MA_1(excelName, cells, marginal_point_judge, currentTimes):
-    """
-    导出 ME (边缘边长) 和 MA (边缘角) 到单独的 Excel 表格
-    """
-    workbook = openpyxl.Workbook()
-    sheet = workbook.active
-    sheet.title = "ME_MA_Statistics"
-
-    # 设置表头
-    me_ma_headings_detail = i18n.languages[i18n.current_language].get('me_ma_headings_detail', 
-        ["细胞序号", "参数类型", "数值", "单位", "位置索引(点/边)", "细胞层数"])
-    headings = me_ma_headings_detail
-    for i, h in enumerate(headings):
-        sheet.cell(row=1, column=i+1, value=h).alignment = align
-        sheet.column_dimensions[get_column_letter(i+1)].width = 15
-
-    # 1. 统计所有边的出现次数，以识别边缘边 (ME)
-    edge_counts = {}
-    for c in cells:
-        l = len(c.points)
-        for j in range(l):
-            p1 = tuple(c.points[j-1])
-            p2 = tuple(c.points[j])
-            # 排序以保证无向性
-            edge_key = tuple(sorted((p1, p2)))
-            edge_counts[edge_key] = edge_counts.get(edge_key, 0) + 1
-
-    # 提取所有边缘边 (只出现一次的边)
-    boundary_edges = {k for k, v in edge_counts.items() if v == 1}
-
-    row_idx = 2
-    for c in cells:
-        # 只处理边缘层的细胞 (Layer 1)
-        if c.layer != 1:
-            continue
-
-        l = len(c.points)
-        for j in range(l):
-            p_prev = c.points[j-1]
-            p_curr = c.points[j]
-            p_next = c.points[(j+1)%l]
-
-            # 定义当前点连接的两条边
-            edge_prev_key = tuple(sorted((tuple(p_prev), tuple(p_curr))))
-            edge_next_key = tuple(sorted((tuple(p_curr), tuple(p_next))))
-
-            # --- 输出 ME (边缘边长) ---
-            if edge_next_key in boundary_edges:
-                dist = get_distance_point_point(p_curr, p_next)
-
-                sheet.cell(row=row_idx, column=1, value=c.no).alignment = align
-                sheet.cell(row=row_idx, column=2, value="ME (边缘边长)").alignment = align
-                sheet.cell(row=row_idx, column=3, value=dist).alignment = align
-                sheet.cell(row=row_idx, column=4, value="Pixel").alignment = align
-                sheet.cell(row=row_idx, column=5, value=f"Edge {j}-{(j+1)%l}").alignment = align
-                sheet.cell(row=row_idx, column=6, value=c.layer).alignment = align
-                row_idx += 1
-
-            # --- 输出 MA (边缘角) ---
-            if edge_prev_key in boundary_edges or edge_next_key in boundary_edges:
-                angle = get_angle_by_three_point([p_prev, p_curr, p_next])
-                angle_deg = math.degrees(angle)
-
-                sheet.cell(row=row_idx, column=1, value=c.no).alignment = align
-                sheet.cell(row=row_idx, column=2, value="MA (边缘角)").alignment = align
-                sheet.cell(row=row_idx, column=3, value=angle_deg).alignment = align
-                sheet.cell(row=row_idx, column=4, value="Degree").alignment = align
-                sheet.cell(row=row_idx, column=5, value=f"Vertex {j}").alignment = align
-                sheet.cell(row=row_idx, column=6, value=c.layer).alignment = align
-                row_idx += 1
-
-    filename = '{0}_ME_MA_{1}.xlsx'.format(excelName, currentTimes)
-    workbook.save(filename)
-    return True
-
-
 def export_ME_MA(excelName, cells, marginal_point_judge, currentTimes):
     """
     导出 ME (边缘边长) 和 MA (边缘角) 到单独的 Excel 表格
@@ -382,9 +274,6 @@ def get_distance_point_point(p1, p2):
     return distance
 
 
-def get_before_headings():
-    return i18n.languages[i18n.current_language].get('before_headings', ["拟合椭圆数据","细胞基本数据"])
-
 def get_ellipse_headings():
     return i18n.languages[i18n.current_language].get('ellipse_headings', [
         "细胞序号",
@@ -410,44 +299,6 @@ def get_edgeangle_headings():
         "夹边2",
         "最初母细胞层数",
         "当前细胞层数"
-    ])
-
-def get_headings():
-    return i18n.languages[i18n.current_language].get('headings', [
-        "细胞序号",
-        "椭圆中心点",
-        "长半轴",
-        "短半轴",
-        "短半轴与x轴的夹角",
-        "从属层",
-        "边数",
-        "面积",
-        "相邻细胞边数和",
-        "内角1",
-        "角1夹边1",
-        "角1夹边2",
-        "内角2",
-        "角2夹边1",
-        "角2夹边2",
-        "内角3",
-        "角3夹边1",
-        "角3夹边2",
-        "内角4",
-        "角4夹边1",
-        "角4夹边2",
-        "内角5",
-        "角5夹边1",
-        "角5夹边2",
-        "内角6",
-        "角6夹边1",
-        "角6夹边2",
-        "内角7",
-        "角7夹边1",
-        "角7夹边2",
-        "内角8",
-        "角8夹边1",
-        "角8夹边2",
-        "更多..."
     ])
 
 align=Alignment(horizontal='center',vertical='center',wrap_text=True)

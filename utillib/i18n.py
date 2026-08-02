@@ -330,7 +330,3 @@ def set_language(lang):
         current_language = lang
         return True
     return False
-
-
-def get_all_languages():
-    return list(languages.keys())

@@ -1,10 +1,6 @@
 import math
 from utillib.mylib import Point, Line, Line_in_Polar_Coordinate_System, CellBlock
 from cell.CellData import CellData
-k_R = 0.1
-k_D = 1.0
-##正式的代码修改
-# from cell.annealing_statistics import annealing_statistics
 
 """
     根据三个点获取角度，第二个点作为角中心点。（依据公式进行计算）
@@ -359,24 +355,7 @@ def get_intersection_cell_blocks(cells):
 
             intersection_cell_blocks.append(cell_block)
 
-    # return intersection_points
     return intersection_cell_blocks
-
-
-#统计内部和边缘顶点个数，并保存，保存形式为两个列表，分别统计边缘和内部顶点的个数并返回这两个列表
-# def get_cell_block_points_index(cells):
-#     edge_points_index = []
-#     internal_points_index = []
-#     for cell in cells:
-#         for point_idx, point in enumerate(cell.points):
-#             # 根据Cell类的属性判断是否为边缘点
-#             # 假设Cell类有layer属性，layer!=1表示边缘细胞
-#             # 或者根据其他属性如ok属性判断
-#             if hasattr(cell, 'layer') and cell.layer != 1:
-#                 edge_points_index.append(point_idx)
-#             else:
-#                 internal_points_index.append(point_idx)
-#     return edge_points_index, internal_points_index
 
 
 '''
@@ -472,94 +451,6 @@ def get_triangle_by_lines(lines):
 
 
 '''
-    排序算法，对退火细胞块，按照最大内角降序排列
-    Sorting algorithm: annealing cells are arranged in descending order according to the maximum inner angle
-    :param intersection_cell_blocks: 退火细胞块列表 Annealed cell block list
-    :return: 排序后的退火细胞块列表 Sorted annealing cell block list
-'''
-'''新排序算法，对退火细胞块，按照距离退火目标点距离进行升序排列'''
-# def sort_cells_by_displacement_test02(cells):
-#     """
-#     按照细胞到理想目标点的完整位移排序，同时处理内部和外部细胞
-#     返回包含详细信息的排序列表
-
-#     :param intersection_cell_blocks: 细胞块列表
-#     :param cells: 所有细胞列表（用于边缘细胞判断）
-#     :return: 排序后的细胞块信息列表，包含类型标记和距离信息
-#     """
-#     sorted_cell_info = []
-
-#     for i, cb in enumerate(intersection_cell_blocks):
-#         # 1. 判断细胞类型
-#         cell_type = get_cell_block_type(cb)
-#         is_edge = (cell_type != "internal")
-
-#         # 2. 获取当前顶点位置
-#         current_point = cb.cell1.points[cb.index1]
-
-#         # 3. 根据类型计算目标点
-#         if is_edge:
-#             # 使用新的理想目标点计算函数
-#             target_point = calculate_ideal_target_point(cb, cells)
-#         else:
-#             # 内部细胞使用三角形重心
-#             target_point = cb.getTriCentreOfGravity()
-
-#         # 4. 计算完整位移距离
-#         displacement = get_distance_point_point(current_point, target_point)
-
-#         # # 5. 添加类型权重（可选：边缘细胞优先级调整）
-#         # weight = get_type_weight(cell_type)
-#         # weighted_displacement = displacement * weight
-
-#         # 6. 构建详细信息字典
-#         # cell_info = {
-#         #     'index': i,  # 原始索引
-#         #     'cell_block': cb,
-#         #     'displacement': displacement,
-#         #     'cell_type': cell_type,
-#         #     'is_edge': is_edge,
-#         #     'current_point': current_point,
-#         #     'target_point': target_point,
-#         #     #'weighted_displacement': weighted_displacement,
-#         #     #'weight': weight
-#         # }
-
-#         #sorted_cell_info.append(cell_info)
-
-#     # 7. 按照加权位移降序排列
-#     sorted_cell_info = sorted(sorted_cell_info, key=lambda x: x['weighted_displacement'],reverse=True)
-#     return sorted_cell_info
-
-# def sort_cells_by_displacement(cells):
-#     sorted_cell_info = []
-#     for cell in cells:
-#         if cell.layer == 1:  # 边缘细胞
-#             cell.displacement = get_distance_point_point(cell.points[0], cell.points[1])
-#         else:  # 内部细胞
-#             cell.displacement = get_distance_point_point(cell.points[0], cell.points[1])
-#             cell.displacement += get_distance_point_point(cell.points[1], cell.points[2])
-#     sorted_cell_info = sorted(sorted_cell_info, key=lambda x: x['weighted_displacement'],reverse=True)
-#     return sorted_cell_info
-##sort_cells_by_annealing_distance_des
-##sort_cells_by_distance的辅助函数
-
-
-
-
-
-
-'''
-    获取退火细胞块中的最大内角
-    Obtain the maximum internal angle in the annealed cell block
-    :param cb: 退火细胞块 Annealed cell block
-    :return: 最大内角 Maximum internal angle
-'''
-
-
-
-
-'''
     判断一个退火细胞块内的三个细胞是否符合条件。
     Determine whether three cells in an annealed cell block meet the conditions.
     :param intersection_cell_blocks: 退火细胞块 Annealed cell block
@@ -590,22 +481,6 @@ def judge_by_intersection_cell_blocks(intersection_cell_blocks, move_point):
 
 
 def judge_by_cell(cell, index, move_point):
-    # 角度方法，在2.0及以上的版本中已弃用 Angle method, obsolete in versions 2.0 and above
-    '''
-    vp = (cell.vx, cell.vy)
-
-    cell_points_len = len(cell.points)
-
-    points = cell.points[:]
-    #print(points[index])
-    points[index] = (move_point.x,move_point.y)
-    #print(points[index])
-    for i in range(index-2, index+1):
-        if judge_by_point([points[i], points[(i+1)%cell_points_len], points[(i+2)%cell_points_len]], vp):
-            return True
-    return False
-    '''
-
     # 状态改变方法 State change method
     vp = [cell.vx, cell.vy]
 
@@ -648,12 +523,7 @@ def judge_by_change(line, o, p, move_p, i):
     # 判断原始两点是否在l两侧部分 Judge whether the original two points are on both sides of L
     judge_param = (a * o.x + b * o.y + c) * (
                 a * p.x + b * p.y + c)  # 判断参数: 通过将点带入直线一般式，计算两点一般式的乘积 来判断是否在直线两侧 Judgment parameter: by bringing the point into the general formula of the line and calculating the product of the general formula of two points to judge whether it is on both sides of the line
-    # print(judge_param,'--------------------------------------')
-    # if math.fabs(judge_param) < 1e-10:
-    #     print(judge_param)
-    #     print(p.x, p.y)
     if math.fabs(judge_param) < 1e-10:  # 一旦某个点在线上，则不可移动 Once a point is on the line, it cannot be moved
-        # print("不可移动")
         in_flag = True  # 切换为初始在线上
     if judge_param > 0:  # 两点同侧 Two points on the same side
         flag = True  # 此处表示两点同侧，本参数会和移动后的结果求异或，从而正确表示状态是否改变 Here, two points are on the same side. This parameter will be different from or after moving, so as to correctly indicate whether the state has changed
@@ -710,11 +580,6 @@ def judge_sum_inner_angle2(cb, mp):
                                        cb.cell2.points[(cb.index2 + 1) % len_points2]])
     angle3 = get_angle_by_three_point([cb.cell3.points[(cb.index3 - 1)], cb.cell3.points[(cb.index3)],
                                        cb.cell3.points[(cb.index3 + 1) % len_points3]])
-
-    '''
-    if not ((angle1 >= math.pi*8/9 and angle1<math.pi) or (angle2 >= math.pi*8/9 and angle2<math.pi) or (angle3 >= math.pi*8/9 and angle3<math.pi)):
-        return False
-    '''
 
     # 计算移动之前的内角平方和 Calculate the sum of squares of interior angles before moving
     be_sia = angle1 * angle1
@@ -820,31 +685,6 @@ def is_cell_convex_after_move(cell, idx, candidate_point):
     return is_polygon_convex(temp_points)
 
 
-'''
-    自动计算退火速率（已弃用
-    :param cb: 退火细胞块 Annealed cell block
-    :return : 退火速率 Annealing rate
-'''
-
-
-
-
-'''
-    自动计算边缘退火速率
-    :param cb: 退火细胞块 Annealed cell block
-    :return : 退火速率 Annealing rate
-'''
-
-
-
-
-'''
-    根据移动目标点，判断是否应进行移动
-    :param cb: 退火细胞块
-    :param move_point: 移动目标点
-    :return : 判断标记
-'''
-
 # 是否启用"移动后对应3个内角平方和增大则拒绝退火"的约束；默认开启，保持旧行为
 USE_INNER_ANGLE_SQ_GUARD = True
 
@@ -872,47 +712,6 @@ def judge_if_annealing(cb, move_point):
         return -4
     return 0
 
-
-'''
-    根据移动目标点，判断边缘是否应进行移动
-    :param point_o: 退火细胞块中心点
-    :param marginalcell1, marginalcell2: 退火细胞块两个边缘细胞
-    :param move_point: 移动目标点
-    :return : 判断标记
-'''
-
-
-#保证移动之后边缘细胞还是稳定的
-
-
-'''
-    获取线段与直线的交点
-    :param x1: 所求细胞的中心X坐标
-    :param y1: 所求细胞的中心Y坐标
-    :param line: 直线方程
-    :param p1: 线段端点坐标1
-    :param p2: 线段端点坐标2
-    :return : 返回交点坐标，如果没有交点，则返回None
-'''
-
-
-
-
-'''
-    计算边缘退火移动目标点
-    :param cb: 边缘退火细胞块
-    :return move_point: 边缘退火移动目标点
-'''
-
-
-#{"variant":"standard","title":"is_vertex_angle_safe_01","id":"90211"}
-#------------------------------------
-#-------------------------
-#~~~{"variant":"standard","title":"is_vertex_angle_safe_03（改进）","id":"70192"}
-
-
-#-------------------------
-#-------------------------
 
 #修改边缘细胞的退火方法为：每个边缘顶点对应两个边缘角，将当前边缘顶点V沿较小边缘角的边缘边移动到目的地点P，使得两个边缘角相等,
 
@@ -1203,20 +1002,16 @@ def calculate_marginal_annealing_distance(point_v, cells):
         cells: 所有细胞列表
 
     返回:
-        float: 退火距离，如果无法计算则返回0
+        float: 退火距离
     """
     import math
 
     # 使用新逻辑找关键点
     key_points = find_marginal_key_points_new(point_v, cells)
-    if key_points is None:
-        return 0.0
 
     point_a = key_points['point_a']
     point_b = key_points['point_b']
     point_o = key_points['point_o']
-    marginal_cell1 = key_points['marginal_cell1']
-    marginal_cell2 = key_points['marginal_cell2']
 
     # 计算两边缘角
     def calculate_simple_angle(p1, vertex, p2):
@@ -1232,23 +1027,6 @@ def calculate_marginal_annealing_distance(point_v, cells):
 
     angle_AVO = calculate_simple_angle(point_a, point_v, point_o)
     angle_BVO = calculate_simple_angle(point_b, point_v, point_o)
-
-    #----------------------------------------
-    # 形状审查 - 判断是否为三角形几何体
-    #----------------------------------------
-    is_triangle_geometry = (len(marginal_cell1.points) == 3 or len(marginal_cell2.points) == 3)
-
-    # 根据几何体形状设置不同的退火阈值
-    if is_triangle_geometry:
-        angle_threshold = math.radians(60)  # 至少有一个三角形几何体，使用60度阈值
-        print(f"[Shape] 检测到至少一个三角形几何体 (marginal_cell1: {len(marginal_cell1.points)}边, marginal_cell2: {len(marginal_cell2.points)}边)，使用60度阈值")
-    else:
-        angle_threshold = math.radians(20)  # 两个都不是三角形，使用20度阈值
-        print(f"[Shape] 两个边缘几何体都不是三角形 (marginal_cell1: {len(marginal_cell1.points)}边, marginal_cell2: {len(marginal_cell2.points)}边)，使用20度阈值")
-
-    # 如果角度差小于阈值，返回0（不需要退火）
-    if abs(angle_AVO - angle_BVO) < angle_threshold:
-        return 0.0
 
     # 确定目标点（向较小角方向移动）
     # 目标点修改为当前点V和邻点（A或B）的中点
@@ -1294,57 +1072,13 @@ def get_marginal_move_point(point_v, annealing_rate, cells):
     idx_oa = key_points['idx_oa']
     idx_ob = key_points['idx_ob']
 
-    # point_a = cell_a.points[(idx_va - 1) % len(cell_a.points)]
-    # point_b = cell_b.points[(idx_vb - 1) % len(cell_b.points)]
-
     # 输出调试信息：先输出V点坐标，再换行输出A,B,O的坐标信息
     print(f"V点坐标: ({point_v[0]:.6f}, {point_v[1]:.6f})")
     print(f"A点坐标: ({point_a[0]:.6f}, {point_a[1]:.6f}), B点坐标: ({point_b[0]:.6f}, {point_b[1]:.6f}), O点坐标: ({point_o[0]:.6f}, {point_o[1]:.6f})")
 
-    # # 检查重复点
-    # if A == V or V == O or A == O:
-    #     #print("[Debug] 重复点检测到：", "A==V" if A==V else "", "V==O" if V==O else "", "A==O" if A==O else "")
-    #     # 处理：直接认为不可退火（防止除0），返回 0 或跳过该顶点
-    #     return 0
-
-    # # 计算向量并检查长度
-    # vAV = safe_vec(A, V)   # A - V
-    # vOV = safe_vec(O, V)   # O - V
-    # lenAV = math.hypot(vAV[0], vAV[1])
-    # lenOV = math.hypot(vOV[0], vOV[1])
-
-    # if lenAV < eps_len or lenOV < eps_len:
-    #     #print(f"[Debug] 向量长度太小：lenAV={lenAV:.3e}, lenOV={lenOV:.3e}，可能存在重合点或非常靠近的点，跳过退火")
-    #     return 0
-
-    # # 计算 cosθ 并数值稳健化
-    # dot = vAV[0]*vOV[0] + vAV[1]*vOV[1]
-    # cos_theta = dot / (lenAV * lenOV)
-    # # 修正可能的数值误差
-    # if cos_theta > 1.0: cos_theta = 1.0
-    # if cos_theta < -1.0: cos_theta = -1.0
-    # theta = math.acos(cos_theta)
-
-    # # # 若角度非常接近 0（例如 < 1e-6），说明共线且同向
-    # # if theta < 1e-8:
-    # #     print(f"[Debug] 角度接近 0（theta={theta:.3e}），A-V-O 共线且同向。")
-    # #     # 处理策略（可选）：
-    # #     # 1) 认为不适合沿该边移动，尝试用另一方向或跳过
-    # #     # 2) 这里我们选择跳过退火以安全为先
-    # #     return 0
-
-    # # # 若角度接近 π（共线反向），theta ≈ π → 仍可以继续（不是 0）
-    # # if abs(theta - math.pi) < 1e-8:
-    # #     print(f"[Debug] 角度接近 π（theta≈{theta:.3e}），A-V-O 共线且反向（允许或按需处理）")
-    # # ======= end 插入点 =======
-
     #----------------------------------------
     # Step 4：计算两边缘角
     #----------------------------------------
-    # print("[DEBUG] A =", point_a)
-    # print("[DEBUG] V =", point_v)
-    # print("[DEBUG] O =", point_o)
-    # print("[DEBUG] B =", point_b)
     # 使用简单的向量夹角计算，避免凹角误判
     def calculate_simple_angle(p1, vertex, p2):
         v1 = (p1[0] - vertex[0], p1[1] - vertex[1])
@@ -1407,8 +1141,6 @@ def get_marginal_move_point(point_v, annealing_rate, cells):
     candidate_V = [point_v[0] + (target_point[0] - point_v[0]) * annealing_rate,
                    point_v[1] + (target_point[1] - point_v[1]) * annealing_rate]
 
-    #print(f"[Move] candidate_V = {candidate_V}")
-
     #----------------------------------------
     # Step 6.5：退火后凸性检查（两个边缘细胞必须仍为凸多边形）
     #----------------------------------------
@@ -1435,7 +1167,6 @@ def get_marginal_move_point(point_v, annealing_rate, cells):
     print(f"after: AOV_after={aov_deg_after:.6f}°, VOB_after={vob_deg_after:.6f}°")
     #打印空行
     print()
-    #print("[Update] 边缘顶点 V 已退火成功")
     return 1
 
 #-------------------------------------------------
@@ -1464,8 +1195,8 @@ def move_point(intersection_cell_blocks, annealing_rate, marginal_point_judge, c
     1. 统一收集 marginal points（边缘顶点）和 inner points（内部顶点）
     2. 按退火距离 D 降序排序（一次排序，本轮不变）
     3. 依序遍历：
-       - marginal: 移动前重算 D_current，若 <=0 跳过；否则执行边缘退火
-       - inner: 不加距离跳过，仅靠 judge_if_annealing 判断
+       - marginal: 执行边缘退火（角度阈值与凸性由 get_marginal_move_point 把关）
+       - inner: 仅靠 judge_if_annealing 判断
     返回: (annealing_count, stats_dict)
     """
     count = 0  # 待退火细胞块总数 Total number of cell blocks to be annealed
@@ -1523,13 +1254,8 @@ def move_point(intersection_cell_blocks, annealing_rate, marginal_point_judge, c
     # ============================================================
     for item in vertex_queue:
         if item['type'] == 'marginal':
-            # marginal point：移动前重算退火距离（使用最新坐标）
+            # marginal point：执行边缘退火（角度阈值与凸性由 get_marginal_move_point 把关）
             point_v = item['point']
-            current_distance = calculate_marginal_annealing_distance(point_v, cells)
-            # 如果距离为0，说明不需要退火，跳过
-            if current_distance <= 0:
-                continue
-            # 执行边缘退火
             marginal_move_result = get_marginal_move_point(point_v, annealing_rate, cells)
             if marginal_move_result > 0:
                 marginal_annealing_points += 1
