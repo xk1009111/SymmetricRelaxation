@@ -254,7 +254,7 @@ def getCellsBySource(source_type, param=0, param2=0, n=10, scale=None):
     """
     统一的细胞生成入口，根据source_type选择生成方式
 
-    :param source_type: 'grid'（随机扰动维诺图n×n）, 'random'（均匀随机维诺图）, 'single'（单个正六边形）
+    :param source_type: 'grid'（随机扰动维诺图n×n）, 'random'（均匀随机维诺图）
     :param param: 扰动参数（grid模式）或种子点数（random模式）
     :param param2: 边缘层数（grid模式）
     :param n: 种子数（random模式）
@@ -263,24 +263,6 @@ def getCellsBySource(source_type, param=0, param2=0, n=10, scale=None):
     """
     if source_type == 'random':
         return getCellsRandom(n, scale)
-    elif source_type == 'single':
-        # 单个正六边形细胞
-        return [create_single_cell()]
     else:
         # 默认：随机扰动维诺图（grid模式）
         return getCells(param, param2, n)
-
-
-def create_single_cell(cx=6.0, cy=5.0, r=1.5):
-    """
-    创建一个单个正六边形细胞
-    """
-    points = [
-        [cx + r, cy],
-        [cx + r * math.cos(math.pi/3), cy + r * math.sin(math.pi/3)],
-        [cx - r * math.cos(math.pi/3), cy + r * math.sin(math.pi/3)],
-        [cx - r, cy],
-        [cx - r * math.cos(math.pi/3), cy - r * math.sin(math.pi/3)],
-        [cx + r * math.cos(math.pi/3), cy - r * math.sin(math.pi/3)]
-    ]
-    return Cell(points)

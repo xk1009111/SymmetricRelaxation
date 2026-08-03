@@ -7,8 +7,6 @@ class Annealer:
     marginal_point_judge = False
     inner_points = 0
     marginal_points = 0
-    last_inner_points = 0
-    last_marginal_points = 0
 
 
     def __init__(self, params=None):
@@ -21,9 +19,6 @@ class Annealer:
         if params is None:
             params = {}
         self.init(params)
-
-    def __str__(self):
-        return ""
 
     # 细胞退火器参数初始化（参数化版本）
     def init(self, params=None):
@@ -39,12 +34,12 @@ class Annealer:
 
         inner_angle_sq_guard = params.get('inner_angle_sq_guard', 1)
         if isinstance(inner_angle_sq_guard, bool):
-            self.inner_angle_sq_guard = inner_angle_sq_guard
+            guard = inner_angle_sq_guard
         elif isinstance(inner_angle_sq_guard, (int, str)):
-            self.inner_angle_sq_guard = int(inner_angle_sq_guard) == 1
+            guard = int(inner_angle_sq_guard) == 1
         else:
-            self.inner_angle_sq_guard = True
-        util.set_annealing_options(self.inner_angle_sq_guard)
+            guard = True
+        util.set_annealing_options(guard)
 
         marginal_point_judge = params.get('marginal_point_judge', 0)  # 默认不参与
         if isinstance(marginal_point_judge, bool):
@@ -70,13 +65,9 @@ class Annealer:
         intersection_cell_blocks = util.get_intersection_cell_blocks(cells)
 
         result = util.move_point(intersection_cell_blocks, self.annealingRate, self.marginal_point_judge, cells)
-        self.last_inner_points = self.inner_points
-        self.last_marginal_points = self.marginal_points
 
         # move_point 约定：(计数, {'inner_points': int, 'marginal_points': int})
-        annealing_count = 0
         if isinstance(result, (tuple, list)) and len(result) >= 2 and isinstance(result[1], dict):
-            annealing_count = result[0]
             stats = result[1]
             try:
                 self.inner_points = int(stats.get('inner_points', 0) or 0)
@@ -85,14 +76,5 @@ class Annealer:
                 self.inner_points = 0
                 self.marginal_points = 0
         else:
-            try:
-                annealing_count = int(result) if not isinstance(result, (tuple, list)) else int(result[0])
-            except (TypeError, ValueError, IndexError):
-                annealing_count = 0
             self.inner_points = 0
             self.marginal_points = 0
-
-        try:
-            return int(annealing_count)
-        except (TypeError, ValueError):
-            return 0

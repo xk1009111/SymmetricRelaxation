@@ -4,7 +4,6 @@ Created on Wed Aug 12 23:11:12 2020
 
 @author: Lenovo
 """
-import math
 
 
 '''

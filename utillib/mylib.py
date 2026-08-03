@@ -62,9 +62,6 @@ class Cell:
     cell_no = 0
     ok = True # 是否最外两层 Is it the outermost two layers
     layer = 0 # 层数，默认为0 The number of layers is 0 by default
-    cell_tier = 0# 细胞层级标记 Cell tier mark Mc=1,Nc-MC=2，第三层 Third_tier=3 Ic=4,未分类 Unclassified
-    edge_line_index = ''
-    edge_line_index = ''  # 边缘细胞壁两端点索引，如果该细胞为边缘细胞，则会存储边缘细胞壁的数据
     points = []
     center_point = Point(0, 0)
     vx = 0
@@ -81,7 +78,6 @@ class Cell:
     def __init__(self,points):
         self.ok = True  # 是否不在边缘 Not on the edge
         self.points = points  # 逆时针存储点 Anticlockwise storage point
-        self.cell_tier = 0  # 新增：初始化分层标记
         self.setNo()
         self.setVertex()
         self.setArea()
@@ -171,20 +167,16 @@ class Cell:
         for p in points:
             if p not in self.points:
                 add_points.append(p)
-        if len(add_points) != 0:
-            self.perfect_fit_flag = False
         self.data = data
         self.add_points = add_points
         return data, add_points
 
     def make_final_ellipse(self, geo):
         # geo 为 fitting() 返回的几何参数 [cx, cy, a, b, theta]；
-        # fitting() 已完成代数→几何转换，这里不能再调用 find_a/find_b/find_angle
-        # （那些函数期望代数参数 [B,C,D,E,F]，会把几何参数误读导致 "方程不是椭圆" 报错）
+        # fitting() 已完成代数→几何转换，这里直接映射即可
         # geo is the geometric params [cx, cy, a, b, theta] returned by fitting();
-        # fitting() has already done the algebraic→geometric conversion, so do NOT
-        # call find_a/find_b/find_angle here (they expect algebraic params [B,C,D,E,F]
-        # and would misread geometric params, raising "方程不是椭圆").
+        # fitting() has already done the algebraic→geometric conversion, so just
+        # map them directly.
         ellipse_data = {}  # 声明存放椭圆参数的变量 Declare the variable that holds the ellipse parameters
 
         cx = float(geo[0])
@@ -248,11 +240,4 @@ class CellBlock:
         yg = (y1+y2+y3) / 3 ;
         #print('in:',xg,yg)
         return Point(xg, yg)
-    #新增一个函数def get_destination_by_now_Gravity(self),计算当前坐标和重心之间的距离
-    def get_destination_by_now_Gravity(self):
-        xg = self.getTriCentreOfGravity().x
-        yg = self.getTriCentreOfGravity().y
-        distance_now_end = math.sqrt((self.x - xg) * (self.x - xg) +
-                         (self.y - yg) * (self.y - yg))
-        return distance_now_end
 

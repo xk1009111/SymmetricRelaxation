@@ -1,6 +1,5 @@
 import math
 from utillib.mylib import Point, Line, Line_in_Polar_Coordinate_System, CellBlock
-from cell.CellData import CellData
 
 """
     根据三个点获取角度，第二个点作为角中心点。（依据公式进行计算）
@@ -97,38 +96,11 @@ def get_distance_point_point(p1, p2):
     distance = math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2))
     return distance
 
-"""
-    计算两点之间的距离(根据公式进行计算)（点为列表类型）
-    Calculate the distance between two points (according to the formula)
-    :param p1: list []
-    :param p2: list []
-    :return: 距离 distance
-"""
 
-##勾股定理求距离，但p1，p2的作用是？
-###为什么有两个求距离的函数？？
 def get_distance_point_point_by_list(p1, p2):
     distance = math.sqrt((p1[0] - p2[0]) * (p1[0] - p2[0]) +
                          (p1[1] - p2[1]) * (p1[1] - p2[1]))
     return distance
-
-
-"""
-    计算点到线的距离
-    Calculate the distance from the point to the line(calculated according to the formula)
-    :param point: Point对象 Point object
-    :param line: Line对象 Line object
-    :return: 距离 distance
-"""
-
-
-
-"""
-    获取中心点到细胞端点的最大距离
-    Gets the maximum distance from the center point to the cell endpoint
-    :param cell: Cell细胞对象 Cell object
-    :return: 中心点到细胞端点的最大距离 Maximum distance from center point to cell end point
-"""
 
 
 def get_distance_centerpoint_point(cell):
@@ -214,25 +186,6 @@ def get_pre_best_lines(cell, max_distence, delta=0):
     return pre_best_lines
 
 
-"""
-    获取实际连线与预最优连线的角度平方和
-    Get the square sum of the angles between the actual line and the pre optimal line
-    :param actual_lines: 实际细胞连线 Actual cell line
-    :param pre_best_lines: 预最优细胞连线 Pre optimal cell line
-    :return: 实际连线与预最优连线的角度平方和 The sum of the squares of the angles between the actual line and the pre optimal line
-"""
-
-##求取当前角度和理论最优线的角度差
-
-
-'''
-    通过公式计算的方法，找到旋转增量的精确值（根据公式进行计算）
-    The exact value of rotation increment is found by formula calculation.(calculated according to the formula)
-    :param cell: 细胞对象 Cell object
-    :return : 细胞连线达到最优时的旋转角度增量 delta The increment delta of rotation angle when the cell line is optimal
-'''
-
-
 def get_best_rotate_delta_by_calculation(cell):
     N = len(cell.points)
     n = 0  # 索引
@@ -245,8 +198,6 @@ def get_best_rotate_delta_by_calculation(cell):
         if min_cita > cell.actual_lines[i].cita:
             min_cita = cell.actual_lines[i].cita
             index = i
-
-    A1 = cell.actual_lines[index].cita
 
     index_ = index
     for i in range(0, N):
@@ -1199,12 +1150,8 @@ def move_point(intersection_cell_blocks, annealing_rate, marginal_point_judge, c
        - inner: 仅靠 judge_if_annealing 判断
     返回: (annealing_count, stats_dict)
     """
-    count = 0  # 待退火细胞块总数 Total number of cell blocks to be annealed
     now_count = 0  # 当前待退火细胞块总数 Total number of cell blocks to be returned
-    marginal_count = 0  # 边缘细胞块总数 Total number of marginal cell blocks
-    best_count = 0  # 接近最优退火细胞块总数 The total number of cell blocks was close to the optimal annealing
     judge_180_count = 0  # 退火后不满足凸多边形的细胞块总数 Total number of cell blocks not meeting convex polygon after annealing
-    judge_inner_angle_count = 0  # 退火后内角平方和会增大的细胞块总数 The total number of cell blocks increased after annealing
     marginal_annealing_points = 0
     inner_annealing_points = 0
 
@@ -1262,7 +1209,6 @@ def move_point(intersection_cell_blocks, annealing_rate, marginal_point_judge, c
         else:
             # inner point：不加距离跳过，仅靠 judge_if_annealing 判断
             cb = item['cb']
-            count += 1  # 总数+1 Total + 1
             now_count += 1  # 当前总数+1 Current total + 1
 
             # 重新获取重心（使用最新坐标）
@@ -1274,13 +1220,9 @@ def move_point(intersection_cell_blocks, annealing_rate, marginal_point_judge, c
             if flag_index == 0:  # 如果可以移动，则返回true
                 move_flag = True
                 inner_annealing_points += 1
-            elif flag_index == -1:
-                best_count += 1
             elif flag_index == -3:
                 judge_180_count += 1
                 print("judge_180_count:", judge_180_count)
-            elif flag_index == -4:
-                judge_inner_angle_count += 1
 
             if not move_flag:  # 经判断，该点无法退火
                 continue
@@ -1304,9 +1246,8 @@ def move_point(intersection_cell_blocks, annealing_rate, marginal_point_judge, c
     ))
 
     # 与 AnnealingGUI.Annealer 约定：元组第二项为内外退火顶点数，供统计面板等使用
-    annealing_count = now_count - marginal_count - best_count - judge_180_count - judge_inner_angle_count
     stats = {
         'marginal_points': marginal_annealing_points,
         'inner_points': inner_annealing_points,
     }
-    return annealing_count, stats
+    return actual_annealed_cell_blocks, stats

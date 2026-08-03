@@ -40,7 +40,7 @@ os.chdir(current_dir)
 sys.path.append(current_dir)
 
 import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog, filedialog
+from tkinter import ttk, messagebox, filedialog
 
 # 初始化 Tk 根窗口（必须在导入 matplotlib 之前）
 root = tk.Tk()
@@ -813,11 +813,6 @@ class AnnealingGUI:
             except Exception:
                 annealer = Annealer()
 
-            # 4. 保存初始层数
-            for cell in cellData.cells:
-                if not hasattr(cell, 'original_layer'):
-                    cell.original_layer = cell.layer
-
             # 5. 显示
             self._display()
 
@@ -1164,34 +1159,9 @@ class AnnealingGUI:
         ax.set_aspect(1)
         ax.tick_params(axis='both', labelsize=18)
 
-        # 保存初始视图
-        if not hasattr(self, '_initial_xlim'):
-            all_x, all_y = [], []
-            for cell in cells:
-                for point in cell.points:
-                    if isinstance(point, (list, tuple)):
-                        all_x.append(point[0])
-                        all_y.append(point[1])
-                    else:
-                        all_x.append(point.x)
-                        all_y.append(point.y)
-            if all_x and all_y:
-                margin = 0.1
-                x_range = max(all_x) - min(all_x)
-                y_range = max(all_y) - min(all_y)
-                self._initial_xlim = [min(all_x) - x_range * margin,
-                                      max(all_x) + x_range * margin]
-                self._initial_ylim = [min(all_y) - y_range * margin,
-                                      max(all_y) + y_range * margin]
-
         colors = matplotlib.cm.tab20(np.linspace(0, 1, 20))
         color_list = ['#FF5722', '#009688', '#673AB7', '#FFC107', '#2196F3']
         color_index = 0
-
-        try:
-            ignore_layer = int(param2) if param2 is not None else 0
-        except Exception:
-            ignore_layer = 0
 
         for i, cell in enumerate(cells):
             cell.setArea()

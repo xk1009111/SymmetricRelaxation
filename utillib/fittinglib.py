@@ -121,9 +121,7 @@ os.environ["LC_ALL"] = "C"
 import rpy2.robjects as robjects
 import math
 import numpy as np
-from scipy.optimize import least_squares  # 新增引用，用于实现R语言中的LMG算法
 from pyenvelope import get_minimum_bounding_rectangle # [新增] MBR支持
-import rpy2.robjects as robjects
 from rpy2.robjects.packages import importr
 from rpy2.robjects import numpy2ri
 # 激活 numpy 到 R 矩阵的自动转换
@@ -183,6 +181,9 @@ def re_ellipse_fitting(points, eps=1e-12):
     return can_shu
 
 #---------------------------------------------------------
+# 代数→几何转换缓存（_algebraic_to_geometric_internal 使用）
+_geo_cache = {}
+
 #正规方程求解: (A^T A)^-1 A^T b
 def _algebraic_to_geometric_internal(can_shu):
     """
@@ -238,13 +239,6 @@ def _algebraic_to_geometric_internal(can_shu):
     return result
 
 
-def find_y_c(can_shu):
-    return _algebraic_to_geometric_internal(can_shu)['k']
-
-
-def find_x_c(can_shu):
-    return _algebraic_to_geometric_internal(can_shu)['h']
-
 #-----------------------辅助函数begin-test-----------------------------------------------
 
 def mirror_points_180(points, centroid):
@@ -264,30 +258,13 @@ def mirror_points_180(points, centroid):
     return points + mirrored
 
 
-def find_a(can_shu):
-    return _algebraic_to_geometric_internal(can_shu)['a']
-
-
-def find_b(can_shu):
-    return _algebraic_to_geometric_internal(can_shu)['b']
-
-
-def find_angle(can_shu):
-    return _algebraic_to_geometric_internal(can_shu)['theta']
-
-
 def algebraic_to_geometric(can_shu):
     """
     将代数参数 can_shu 转换为几何参数数组
     返回: [cx, cy, a, b, theta]（与R返回格式一致）
     """
-    return np.array([
-        find_x_c(can_shu),
-        find_y_c(can_shu),
-        find_a(can_shu),
-        find_b(can_shu),
-        find_angle(can_shu)
-    ])
+    r = _algebraic_to_geometric_internal(can_shu)
+    return np.array([r['h'], r['k'], r['a'], r['b'], r['theta']])
 
 
 def calculate_teacher_pargini(points, init_points=None):

@@ -1,10 +1,7 @@
 import openpyxl
-from openpyxl.styles import Font, colors, Alignment
+from openpyxl.styles import Alignment
 from openpyxl.utils import get_column_letter
-import time
 import math
-import os
-import cell
 import utillib.i18n as i18n
 
 
