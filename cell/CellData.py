@@ -1,9 +1,7 @@
-import numpy as np
+import time
 import math
 class CellData:
     cells = []
-    sumArea = 0  # 当前总面积 Current total area
-    averageArea = 0
     length = 0
     lineOfCell = {}
 
@@ -12,31 +10,31 @@ class CellData:
 
     # 细胞集参数初始化
     def init(self, cells):
+        # 需求 5.4a: 记录上一轮移动的顶点数
+        self.previous_internal_moved = 0
+        self.previous_edge_moved = 0
+
         self.cells = cells
         self.length = len(cells)
+        # 确保所有细胞都有cell_tier属性
+        for cell in self.cells:
+            if not hasattr(cell, 'cell_tier'):
+                cell.cell_tier = 0
 
         for i in cells:
-            self.sumArea += i.area
             i.setArea()
 
-        self.averageArea = float('%.2f' % (self.sumArea / self.length))  # 平均面积 average area
         self.list_line_of_cell()
 
-    # 生长
-    def grow(self):
-        """按比例缩放网络以维持平均面积不变（每轮刷新时使用）"""
-        # 维持平均面积不变，计算出成长比例b
-        sArea = self.averageArea * self.length
-        b = sArea / self.sumArea
+    def topo_grow(self):
         for c in self.cells:
-            c.grow(np.sqrt(b))
-        # 更新当前细胞图的总面积
-        self.sumArea = sArea
-
-    def flush(self, isGrow=True, isListLineOfCell=True):
+            c.setVertex()
+            c.setArea()
         self.length = len(self.cells)
-        if isGrow:
-            self.grow()
+
+    def flush(self, isListLineOfCell=True):
+        self.length = len(self.cells)
+        self.topo_grow()
 
         if isListLineOfCell:
             self.list_line_of_cell()
@@ -114,6 +112,7 @@ class CellData:
                 # 如果边只被一个细胞拥有（计数为1），说明是边缘边
                 # 内部边被2个细胞共享，所以计数为2
                 if edge_count.get(string, 0) == 1:
+                    cell.edge_line_index = '{0}|{1}'.format(i-1, i)  # 存储边缘细胞壁两端点的索引
                     flag = True
                     break
             # 如果是边缘细胞，将周围细胞全部排除

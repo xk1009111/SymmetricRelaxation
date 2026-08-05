@@ -40,7 +40,7 @@ os.chdir(current_dir)
 sys.path.append(current_dir)
 
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox, simpledialog, filedialog
 
 # 初始化 Tk 根窗口（必须在导入 matplotlib 之前）
 root = tk.Tk()
@@ -598,6 +598,8 @@ class AnnealingGUI:
             _('marginal_points_stat'))
         self.stats_group_cells, self.stats_value_cells = _make_group(
             _('total_cells'))
+        self.stats_group_round, self.stats_value_round = _make_group(
+            _('current_anneal_round'))
 
         self._update_stats_panel()
 
@@ -605,7 +607,8 @@ class AnnealingGUI:
                             last_anneal_inner=None,
                             marginal_points_total=None,
                             last_anneal_marginal=None,
-                            cell_total=None):
+                            cell_total=None,
+                            anneal_round=None):
         """更新统计面板"""
         if not hasattr(self, 'stats_value_inner'):
             return
@@ -621,6 +624,8 @@ class AnnealingGUI:
             text=f"{_safe(marginal_points_total)} / {_safe(last_anneal_marginal)}")
         self.stats_value_cells.config(
             text=_safe(cell_total))
+        self.stats_value_round.config(
+            text=_safe(anneal_round))
 
     def _vertex_inner_marginal_totals(self):
         """计算内部/边缘顶点数"""
@@ -797,7 +802,7 @@ class AnnealingGUI:
                 param2 = '0'
 
             cellData = CellData(cells)
-            cellData.flush(isGrow=True)
+            cellData.flush()
 
             # 2.5. 计算完整的层号（确保母细胞层和当前层使用相同的算法）
             layerMarker.layer_mark2(cellData.cells, cellSeed)
@@ -869,7 +874,7 @@ class AnnealingGUI:
 
         for i in range(times):
             annealer.annealing(cellData.cells)
-            cellData.flush(isGrow=True)
+            cellData.flush()
 
             inner_total, marginal_total = self._vertex_inner_marginal_totals()
             self._update_stats_panel(
@@ -877,7 +882,8 @@ class AnnealingGUI:
                 last_anneal_inner=int(getattr(annealer, 'inner_points', 0) or 0),
                 marginal_points_total=marginal_total,
                 last_anneal_marginal=int(getattr(annealer, 'marginal_points', 0) or 0),
-                cell_total=len(cellData.cells)
+                cell_total=len(cellData.cells),
+                anneal_round=f"{i + 1} / {times}"
             )
             self._display()
 
@@ -1074,6 +1080,8 @@ class AnnealingGUI:
             self.stats_group_marginal.config(text=_('marginal_points_stat'))
         if hasattr(self, 'stats_group_cells'):
             self.stats_group_cells.config(text=_('total_cells'))
+        if hasattr(self, 'stats_group_round'):
+            self.stats_group_round.config(text=_('current_anneal_round'))
         if hasattr(self, '_lang_label_zh') and hasattr(self, '_lang_label_en'):
             current_lang = i18n.get_current_language()
             s = self.font_scale.get()
@@ -1125,7 +1133,7 @@ class AnnealingGUI:
             cells = [Cell(pts) for pts in self.cells_snapshot]
             from cell.CellData import CellData as _CD
             globals()['cellData'] = _CD(cells)
-            cellData.flush(isGrow=True)
+            cellData.flush()
             self._display()
             inner_total, marginal_total = self._vertex_inner_marginal_totals()
             self._update_stats_panel(

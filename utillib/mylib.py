@@ -138,17 +138,6 @@ class Cell:
         self.area= s
 
 
-    #成长mul倍
-    # grow mul times
-    def grow(self,mul):
-        points = self.points
-        for i in range(len(points)):
-            points[i][0] *= mul
-            points[i][1] *= mul
-        self.setVertex()
-        self.setArea()
-
-
     # 椭圆拟合部分
     # value 为阈值
     def like_ellipse(self,
