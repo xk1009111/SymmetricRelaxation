@@ -2,6 +2,7 @@
 # ============================================
 #  Setup Script for Linux / macOS
 #  Cell Annealing Tool - Symmetric Relaxation of 2D Cellular Networks
+#  Requires Python 3.14+ managed via uv
 # ============================================
 
 set -e
@@ -13,24 +14,25 @@ echo " Cell Annealing Tool - Environment Setup"
 echo "============================================"
 echo ""
 
-# ---- Step 1: Check Python ----
-echo "[1/4] Checking Python installation..."
-if command -v python3 &> /dev/null; then
-    PYTHON=python3
-elif command -v python &> /dev/null; then
-    PYTHON=python
-else
-    echo "[ERROR] Python is not found. Please install Python 3.8+ from:"
-    echo "        https://www.python.org/downloads/"
+# ---- Step 1: Check uv, install Python 3.14.6, create .venv ----
+echo "[1/4] Checking uv installation..."
+if ! command -v uv &> /dev/null; then
+    echo "[ERROR] uv is not found. Please install uv first:"
+    echo "        https://docs.astral.sh/uv/getting-started/installation/"
     exit 1
 fi
-echo "[OK] Python detected:"
-$PYTHON --version
+echo "[OK] uv detected:"
+uv --version
+echo ""
+echo "      Installing Python 3.14.6 and creating .venv..."
+uv python install 3.14.6
+[ -d ".venv" ] || uv venv .venv --python 3.14.6
+echo "[OK] .venv is ready."
 
 # ---- Step 2: Install Python dependencies ----
 echo ""
 echo "[2/4] Installing Python dependencies..."
-$PYTHON -m pip install -r requirements.txt
+uv pip install -r requirements.txt
 echo "[OK] Python dependencies installed."
 
 # ---- Step 3: Check / Setup R ----
@@ -131,5 +133,5 @@ fi
 echo ""
 echo "============================================"
 echo " Setup complete! You can now run:"
-echo "     $PYTHON only_annealing_main.py"
+echo "     uv run python only_annealing_main.py"
 echo "============================================"

@@ -1,55 +1,5 @@
 import math
-from utillib.mylib import Point, Line, Line_in_Polar_Coordinate_System, CellBlock
-
-"""
-    根据三个点获取角度，第二个点作为角中心点。（依据公式进行计算）
-    The angle is obtained from three points, and the second point is used as the center point of the corner. (calculated according to the formula)
-    :param p_list: 数组，包含三个点。 Array containing three points.
-    :return: 角度 angle
-"""
-##test
-##这里的abc是边长？根据勾股定理求abc的边长用来求角度？
-def get_angle_by_three_point(p_list):
-    """
-    根据三个点计算内角，能够正确处理大于180度的凹角（优角）。
-    假定顶点是按逆时针顺序排列的。
-    """
-    p1, p_vertex, p2 = p_list[0], p_list[1], p_list[2]
-
-    # 从顶点p_vertex指向p1和p2的向量
-    v1 = [p1[0] - p_vertex[0], p1[1] - p_vertex[1]]
-    v2 = [p2[0] - p_vertex[0], p2[1] - p_vertex[1]]
-
-    # 向量的点积
-    dot_product = v1[0] * v2[0] + v1[1] * v2[1]
-
-    # 向量的模长
-    mag1 = math.sqrt(v1[0]**2 + v1[1]**2)
-    mag2 = math.sqrt(v2[0]**2 + v2[1]**2)
-
-    # 防止除零错误
-    if mag1 * mag2 == 0:
-        return 0
-
-    # 计算余弦值并限制在[-1, 1]范围内，防止浮点误差
-    cos_angle = max(-1.0, min(1.0, dot_product / (mag1 * mag2)))
-
-    # 通过反余弦计算基础角 (0 to pi)
-    angle = math.acos(cos_angle)
-
-    # 使用二维向量的叉乘来判断角度方向
-    # 叉乘 Z 分量: v1.x * v2.y - v1.y * v2.x
-    cross_product_z = v1[0] * v2[1] - v1[1] * v2[0]
-
-    # 假设多边形顶点是逆时针(CCW)顺序。
-    # 在CCW多边形中，所有内角都应该是"左转"。
-    # v1到v2的叉乘为正，表示左转，是凸角 (<180)。
-    # 如果叉乘为负，表示右转，是凹角 (>180)，我们需要取其优角。
-    if cross_product_z < 0:
-        return 2 * math.pi - angle  # 返回大于180度的优角
-    else:
-        return angle  # 返回小于180度的锐角或钝角
-
+from utillib.mylib import Point, Line, Line_in_Polar_Coordinate_System, CellBlock, get_distance_point_point, angle_by_three_points
 
 """
     计算两点之间的距离(根据公式进行计算)
@@ -58,49 +8,6 @@ def get_angle_by_three_point(p_list):
     :param p2: Point对象 Point object
     :return: 距离 distance
 """
-
-
-
-def get_distance_point_point(p1, p2):
-    """
-    计算两点之间的距离，支持多种格式
-
-    Args:
-        p1: 点1，可以是 Point 对象、列表 [x,y] 或元组 (x,y)
-        p2: 点2，格式同 p1
-
-    Returns:
-        float: 两点间的距离
-    """
-    # 处理 p1
-    if hasattr(p1, 'x') and hasattr(p1, 'y'):
-        # p1 是 Point 对象
-        x1, y1 = p1.x, p1.y
-    elif isinstance(p1, (list, tuple)) and len(p1) >= 2:
-        # p1 是列表或元组 [x,y]
-        x1, y1 = p1[0], p1[1]
-    else:
-        raise ValueError(f"不支持的坐标格式: {type(p1)}")
-
-    # 处理 p2
-    if hasattr(p2, 'x') and hasattr(p2, 'y'):
-        # p2 是 Point 对象
-        x2, y2 = p2.x, p2.y
-    elif isinstance(p2, (list, tuple)) and len(p2) >= 2:
-        # p2 是列表或元组 [x,y]
-        x2, y2 = p2[0], p2[1]
-    else:
-        raise ValueError(f"不支持的坐标格式: {type(p2)}")
-
-    # 计算距离
-    distance = math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2))
-    return distance
-
-
-def get_distance_point_point_by_list(p1, p2):
-    distance = math.sqrt((p1[0] - p2[0]) * (p1[0] - p2[0]) +
-                         (p1[1] - p2[1]) * (p1[1] - p2[1]))
-    return distance
 
 
 def get_distance_centerpoint_point(cell):
@@ -255,11 +162,6 @@ def get_intersection_cell_blocks(cells):
     for cell in cells:
         point_index = 0
         for point in cell.points:
-            # print(point)
-            # print(pre_intersection_points)
-            # print(point)
-            # print(type(point))
-            # print(type([0, 0]))
             if point in pre_intersection_points:
                 # 这里需要保存新的 点-细胞索引。在原有点-细胞索引的位置上追加保存
                 # The new point cell index needs to be saved here. Save the original point cell index in the position
@@ -396,9 +298,8 @@ def get_triangle_by_lines(lines):
     point1 = get_crossover_point(lines[0], lines[1])
     point2 = get_crossover_point(lines[0], lines[2])
     point3 = get_crossover_point(lines[1], lines[2])
-    point4 = point1  # 形成闭环，便于作图 Form a closed loop for drawing
 
-    return [point1, point2, point3, point4]
+    return [point1, point2, point3]
 
 
 '''
@@ -525,12 +426,12 @@ def judge_sum_inner_angle2(cb, mp):
     len_points2 = len(cb.cell2.points)
     len_points3 = len(cb.cell3.points)
 
-    angle1 = get_angle_by_three_point([cb.cell1.points[(cb.index1 - 1)], cb.cell1.points[(cb.index1)],
-                                       cb.cell1.points[(cb.index1 + 1) % len_points1]])
-    angle2 = get_angle_by_three_point([cb.cell2.points[(cb.index2 - 1)], cb.cell2.points[(cb.index2)],
-                                       cb.cell2.points[(cb.index2 + 1) % len_points2]])
-    angle3 = get_angle_by_three_point([cb.cell3.points[(cb.index3 - 1)], cb.cell3.points[(cb.index3)],
-                                       cb.cell3.points[(cb.index3 + 1) % len_points3]])
+    angle1 = angle_by_three_points(cb.cell1.points[(cb.index1 - 1)], cb.cell1.points[(cb.index1)],
+                                   cb.cell1.points[(cb.index1 + 1) % len_points1])
+    angle2 = angle_by_three_points(cb.cell2.points[(cb.index2 - 1)], cb.cell2.points[(cb.index2)],
+                                   cb.cell2.points[(cb.index2 + 1) % len_points2])
+    angle3 = angle_by_three_points(cb.cell3.points[(cb.index3 - 1)], cb.cell3.points[(cb.index3)],
+                                   cb.cell3.points[(cb.index3 + 1) % len_points3])
 
     # 计算移动之前的内角平方和 Calculate the sum of squares of interior angles before moving
     be_sia = angle1 * angle1
@@ -538,12 +439,12 @@ def judge_sum_inner_angle2(cb, mp):
     be_sia += angle3 * angle3
 
     # 计算移动之后的内角平方和 Calculate the sum of squares of interior angles after moving
-    af_angle1 = get_angle_by_three_point([cb.cell1.points[(cb.index1 - 1)], (mp.x, mp.y),
-                                       cb.cell1.points[(cb.index1 + 1) % len_points1]])
-    af_angle2 = get_angle_by_three_point([cb.cell2.points[(cb.index2 - 1)], (mp.x, mp.y),
-                                        cb.cell2.points[(cb.index2 + 1) % len_points2]])
-    af_angle3 = get_angle_by_three_point([cb.cell3.points[(cb.index3 - 1)], (mp.x, mp.y),
-                                        cb.cell3.points[(cb.index3 + 1) % len_points3]])
+    af_angle1 = angle_by_three_points(cb.cell1.points[(cb.index1 - 1)], (mp.x, mp.y),
+                                      cb.cell1.points[(cb.index1 + 1) % len_points1])
+    af_angle2 = angle_by_three_points(cb.cell2.points[(cb.index2 - 1)], (mp.x, mp.y),
+                                      cb.cell2.points[(cb.index2 + 1) % len_points2])
+    af_angle3 = angle_by_three_points(cb.cell3.points[(cb.index3 - 1)], (mp.x, mp.y),
+                                      cb.cell3.points[(cb.index3 + 1) % len_points3])
     af_sia = af_angle1 * af_angle1 + af_angle2 * af_angle2 + af_angle3 * af_angle3
 
     if af_sia > be_sia:
@@ -664,6 +565,17 @@ def judge_if_annealing(cb, move_point):
     return 0
 
 
+# ---------------------------------------------------------------------------
+# 模块级辅助函数（供多处复用，避免在嵌套函数中重复定义）
+# ---------------------------------------------------------------------------
+
+def points_equal(p1, p2, tolerance=1e-9):
+    """判断两个点是否相等（考虑浮点误差），支持 list/tuple 格式的点坐标"""
+    if isinstance(p1, (list, tuple)) and isinstance(p2, (list, tuple)):
+        return abs(p1[0] - p2[0]) < tolerance and abs(p1[1] - p2[1]) < tolerance
+    return False
+
+
 #修改边缘细胞的退火方法为：每个边缘顶点对应两个边缘角，将当前边缘顶点V沿较小边缘角的边缘边移动到目的地点P，使得两个边缘角相等,
 
 def get_all_marginal_points(cells):
@@ -676,12 +588,6 @@ def get_all_marginal_points(cells):
     返回:
         list: 所有边缘顶点的列表 [[x, y], ...]
     """
-    # 辅助函数：判断两个点是否相等（考虑浮点误差）
-    def points_equal(p1, p2, tolerance=1e-9):
-        if isinstance(p1, (list, tuple)) and isinstance(p2, (list, tuple)):
-            return abs(p1[0] - p2[0]) < tolerance and abs(p1[1] - p2[1]) < tolerance
-        return False
-
     all_marginal_points = []
     vertex_to_cells = {}  # 记录每个顶点被哪些细胞共享
 
@@ -737,12 +643,6 @@ def find_marginal_key_points_new(point_v, cells):
         }
         如果找不到关键点，返回None
     """
-    # 辅助函数：判断两个点是否相等（考虑浮点误差）
-    def points_equal(p1, p2, tolerance=1e-9):
-        if isinstance(p1, (list, tuple)) and isinstance(p2, (list, tuple)):
-            return abs(p1[0] - p2[0]) < tolerance and abs(p1[1] - p2[1]) < tolerance
-        return False
-
     # Step 1: 首先定位所有的边缘顶点，只被两个细胞共享的点为边缘顶点
     all_marginal_points = []
     vertex_to_cells = {}  # 记录每个顶点被哪些细胞共享
@@ -955,7 +855,6 @@ def calculate_marginal_annealing_distance(point_v, cells):
     返回:
         float: 退火距离
     """
-    import math
 
     # 使用新逻辑找关键点
     key_points = find_marginal_key_points_new(point_v, cells)
@@ -965,19 +864,8 @@ def calculate_marginal_annealing_distance(point_v, cells):
     point_o = key_points['point_o']
 
     # 计算两边缘角
-    def calculate_simple_angle(p1, vertex, p2):
-        v1 = (p1[0] - vertex[0], p1[1] - vertex[1])
-        v2 = (p2[0] - vertex[0], p2[1] - vertex[1])
-        dot_product = v1[0] * v2[0] + v1[1] * v2[1]
-        mag1 = math.hypot(*v1)
-        mag2 = math.hypot(*v2)
-        if math.isclose(mag1 * mag2, 0):
-            return 0
-        cos_val = max(-1.0, min(1.0, dot_product / (mag1 * mag2)))
-        return math.acos(cos_val)
-
-    angle_AVO = calculate_simple_angle(point_a, point_v, point_o)
-    angle_BVO = calculate_simple_angle(point_b, point_v, point_o)
+    angle_AVO = angle_by_three_points(point_a, point_v, point_o)
+    angle_BVO = angle_by_three_points(point_b, point_v, point_o)
 
     # 确定目标点（向较小角方向移动）
     # 目标点修改为当前点V和邻点（A或B）的中点
@@ -989,7 +877,7 @@ def calculate_marginal_annealing_distance(point_v, cells):
         target_point = [(point_v[0] + point_b[0]) / 2, (point_v[1] + point_b[1]) / 2]
 
     # 计算退火距离（从V到目标点的距离，不乘退火速率，统一用于排序）
-    distance = get_distance_point_point_by_list(point_v, target_point)
+    distance = get_distance_point_point(point_v, target_point)
 
     return distance
 
@@ -1005,7 +893,6 @@ def get_marginal_move_point(point_v, annealing_rate, cells):
        * 使用凸角规范化（防止 2π 误判 180°）
     6. 移动成功 → 更新两个边缘 cell 中的 V
     """
-    import math
 
 
     #----------------------------------------
@@ -1031,27 +918,14 @@ def get_marginal_move_point(point_v, annealing_rate, cells):
     # Step 4：计算两边缘角
     #----------------------------------------
     # 使用简单的向量夹角计算，避免凹角误判
-    def calculate_simple_angle(p1, vertex, p2):
-        v1 = (p1[0] - vertex[0], p1[1] - vertex[1])
-        v2 = (p2[0] - vertex[0], p2[1] - vertex[1])
-        dot_product = v1[0] * v2[0] + v1[1] * v2[1]
-        mag1 = math.hypot(*v1)
-        mag2 = math.hypot(*v2)
-        if math.isclose(mag1 * mag2, 0):
-            return 0
-        cos_val = max(-1.0, min(1.0, dot_product / (mag1 * mag2)))
-        return math.acos(cos_val)
 
-    # 辅助函数：将弧度转换为角度（度），如果大于180度则输出360-原角度值
+    # 辅助函数：将弧度转换为角度（度）
     def rad_to_deg_display(angle_rad):
-        """将弧度转换为角度（度），如果大于180度则输出360-原角度值"""
-        angle_deg = math.degrees(angle_rad)
-        if angle_deg > 180:
-            return 360 - angle_deg
-        return angle_deg
+        """将弧度转换为角度（度）。angle_by_three_points 恒返回 ≤180°，无需归一化。"""
+        return math.degrees(angle_rad)
 
-    angle_AVO = calculate_simple_angle(point_a, point_v, point_o)
-    angle_BVO = calculate_simple_angle(point_b, point_v, point_o)
+    angle_AVO = angle_by_three_points(point_a, point_v, point_o)
+    angle_BVO = angle_by_three_points(point_b, point_v, point_o)
 
     #----------------------------------------
     # Step 4.5：形状审查 - 判断是否为三角形几何体
@@ -1109,8 +983,8 @@ def get_marginal_move_point(point_v, annealing_rate, cells):
     #----------------------------------------
     marginal_cell1.points[idx_va] = candidate_V
     marginal_cell2.points[idx_vb] = candidate_V
-    angle_AVO = get_angle_by_three_point([point_a, candidate_V, point_o])
-    angle_BVO = get_angle_by_three_point([point_b, candidate_V, point_o])
+    angle_AVO = angle_by_three_points(point_a, candidate_V, point_o)
+    angle_BVO = angle_by_three_points(point_b, candidate_V, point_o)
 
     # 转换为角度值并格式化输出
     aov_deg_after = rad_to_deg_display(angle_AVO)
@@ -1155,7 +1029,8 @@ def move_point(intersection_cell_blocks, annealing_rate, marginal_point_judge, c
     marginal_annealing_points = 0
     inner_annealing_points = 0
 
-    # 如果边缘退火开启，输出一次所有边缘顶点信息
+    # 如果边缘退火开启，收集并输出所有边缘顶点信息（结果在下方收集阶段复用）
+    all_marginal_points = None
     if marginal_point_judge:
         all_marginal_points = get_all_marginal_points(cells)
         print(f"[MarginalPoints] 全部边缘顶点个数: {len(all_marginal_points)}")
@@ -1170,7 +1045,6 @@ def move_point(intersection_cell_blocks, annealing_rate, marginal_point_judge, c
 
     # 收集 marginal points（边缘顶点）
     if marginal_point_judge:
-        all_marginal_points = get_all_marginal_points(cells)
         for point_v in all_marginal_points:
             D = calculate_marginal_annealing_distance(point_v, cells)
             vertex_queue.append({

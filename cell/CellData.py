@@ -1,5 +1,3 @@
-import time
-import math
 class CellData:
     cells = []
     length = 0
@@ -10,16 +8,8 @@ class CellData:
 
     # 细胞集参数初始化
     def init(self, cells):
-        # 需求 5.4a: 记录上一轮移动的顶点数
-        self.previous_internal_moved = 0
-        self.previous_edge_moved = 0
-
         self.cells = cells
         self.length = len(cells)
-        # 确保所有细胞都有cell_tier属性
-        for cell in self.cells:
-            if not hasattr(cell, 'cell_tier'):
-                cell.cell_tier = 0
 
         for i in cells:
             i.setArea()
@@ -112,7 +102,6 @@ class CellData:
                 # 如果边只被一个细胞拥有（计数为1），说明是边缘边
                 # 内部边被2个细胞共享，所以计数为2
                 if edge_count.get(string, 0) == 1:
-                    cell.edge_line_index = '{0}|{1}'.format(i-1, i)  # 存储边缘细胞壁两端点的索引
                     flag = True
                     break
             # 如果是边缘细胞，将周围细胞全部排除

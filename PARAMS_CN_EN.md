@@ -39,7 +39,7 @@
 
 | 键名 | 中文 | 英文 |
 |------|------|------|
-| auxiliary_lines | 最优中心射线 | Optimal Rays |
+| auxiliary_lines | 辅助线 | Auxiliary Lines |
 | ellipse_fitting | 椭圆拟合 | Ellipse Fitting |
 | export_data | 输出数据 | Export Data |
 | undo | 回退 | Undo |

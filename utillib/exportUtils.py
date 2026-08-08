@@ -3,12 +3,13 @@ from openpyxl.styles import Alignment
 from openpyxl.utils import get_column_letter
 import math
 import utillib.i18n as i18n
+from utillib.mylib import get_distance_point_point, angle_by_three_points
 
 
 '''
     椭圆拟合数据表
 '''
-def ellipse(excelName,cells,lineOfCell, marginal_point_judge, currentTimes, ignore, printTime=''):
+def ellipse(excelName, cells, lineOfCell, currentTimes):
 
     workbook=openpyxl.Workbook()
     sheet =workbook.active
@@ -40,14 +41,9 @@ def ellipse(excelName,cells,lineOfCell, marginal_point_judge, currentTimes, igno
                 totalEdge+=len(lineOfCell[string].points)
 
 
-        '''
-        if (not c.ok) and marginal_point_judge:
-            continue
-        '''
         sheet.cell(row=2+i,column=1,value=c.no).alignment=align
 
         ellipse_data = c.data
-        add_points = c.add_points
 
         sheet.cell(row=2+i,column=2,value=str('('+str(ellipse_data['cp'].x)+','+str(ellipse_data['cp'].y)+')')).alignment=align
         sheet.cell(row=2+i,column=3,value=ellipse_data['a']).alignment=align
@@ -78,7 +74,7 @@ def ellipse(excelName,cells,lineOfCell, marginal_point_judge, currentTimes, igno
     return True
 
 
-def edgeangle(excelName,cells,lineOfCell, marginal_point_judge, currentTimes, ignore, printTime=''):
+def edgeangle(excelName, cells, lineOfCell, currentTimes):
 
     workbook=openpyxl.Workbook()
     sheet =workbook.active
@@ -116,11 +112,11 @@ def edgeangle(excelName,cells,lineOfCell, marginal_point_judge, currentTimes, ig
             p = c.points[j]
             p2 = c.points[(j+1)%l]
 
-            angle = get_angle_by_three_point([p1,p,p2])
+            angle = angle_by_three_points(p1, p, p2)
             d1 = get_distance_point_point(p1, p)
             d2 = get_distance_point_point(p, p2)
 
-            sheet.cell(row=2+i,column=4,value=angle).alignment=align
+            sheet.cell(row=2+i,column=4,value=math.degrees(angle)).alignment=align
             sheet.cell(row=2+i,column=5,value=d1).alignment=align
             sheet.cell(row=2+i,column=6,value=d2).alignment=align
             sheet.column_dimensions[get_column_letter(4)].width = 20.0
@@ -144,7 +140,7 @@ def edgeangle(excelName,cells,lineOfCell, marginal_point_judge, currentTimes, ig
     return True
 
 
-def export_ME_MA(excelName, cells, marginal_point_judge, currentTimes):
+def export_ME_MA(excelName, cells, currentTimes):
     """
     导出 ME (边缘边长) 和 MA (边缘角) 到单独的 Excel 表格
     按照老师要求：将一个边缘细胞的两个边缘角(MA)和一个边缘边(ME)以及层数放在一行
@@ -199,7 +195,7 @@ def export_ME_MA(excelName, cells, marginal_point_judge, currentTimes):
 
             # 记录边缘角 (如果顶点连接的任意一条边是边缘边)
             if edge_prev_key in boundary_edges or edge_next_key in boundary_edges:
-                angle = get_angle_by_three_point([p_prev, p_curr, p_next])
+                angle = angle_by_three_points(p_prev, p_curr, p_next)
                 mas.append(math.degrees(angle))
 
         # 提取数据：标准的边缘细胞(不在死角)通常会有1条边缘边和2个边缘角
@@ -222,53 +218,17 @@ def export_ME_MA(excelName, cells, marginal_point_judge, currentTimes):
     return True
 
 
-def create(excelName, cells, lineOfCell, marginal_point_judge, N, ignore, currentTimes=0):
+def create(excelName, cells, lineOfCell, currentTimes=0):
     # 依次调用三个导出函数：椭圆数据、边角数据、ME/MA数据
-    res_me_ma = export_ME_MA(excelName, cells, marginal_point_judge, currentTimes)
+    res_me_ma = export_ME_MA(excelName, cells, currentTimes)
 
     # 调用原有的 ellipse 和 edgeangle 函数
-    if ellipse("ellipse", cells, lineOfCell, marginal_point_judge, currentTimes, ignore) \
-        and edgeangle("edgeAngle", cells, lineOfCell, marginal_point_judge, currentTimes, ignore) \
+    if ellipse("ellipse", cells, lineOfCell, currentTimes) \
+        and edgeangle("edgeAngle", cells, lineOfCell, currentTimes) \
         and res_me_ma:
         return True
     else:
         return False
-
-
-"""
-    根据三个点获取角度，第二个点作为角中心点。（依据公式进行计算）
-    The angle is obtained from three points, and the second point is used as the center point of the corner. (calculated according to the formula)
-    :param p_list: 数组，包含三个点。 Array containing three points.
-    :return: 角度 angle
-"""
-def get_angle_by_three_point(p_list):
-
-    a = math.sqrt((p_list[1][0] - p_list[2][0]) * (p_list[1][0] - p_list[2][0]) + (p_list[1][1] - p_list[2][1]) * (p_list[1][1] - p_list[2][1]))
-    b = math.sqrt((p_list[0][0] - p_list[2][0]) * (p_list[0][0] - p_list[2][0]) + (p_list[0][1] - p_list[2][1]) * (p_list[0][1] - p_list[2][1]))
-    c = math.sqrt((p_list[1][0] - p_list[0][0]) * (p_list[1][0] - p_list[0][0]) + (p_list[1][1] - p_list[0][1]) * (p_list[1][1] - p_list[0][1]))
-
-    if (a*a + c*c -b*b)/(2*a*c) >= -1 and (a*a + c*c -b*b)/(2*a*c) <=1:
-        angle = math.acos((a*a + c*c -b*b)/(2*a*c))
-    elif (a*a + c*c -b*b)/(2*a*c) < -1:
-        angle = math.acos(-1)
-    elif (a*a + c*c -b*b)/(2*a*c) > 1:
-        angle = math.acos(1)
-
-    return angle
-
-
-"""
-    计算两点之间的距离(根据公式进行计算)
-    Calculate the distance between two points (according to the formula)
-    :param p1: Point对象 Point object
-    :param l2: Point对象 Point object
-    :return: 距离 distance
-"""
-def get_distance_point_point(p1, p2):
-
-    distance = math.sqrt((p1[0] - p2[0])*(p1[0] - p2[0]) +
-                                 (p1[1] - p2[1])*(p1[1] - p2[1]))
-    return distance
 
 
 def get_ellipse_headings():

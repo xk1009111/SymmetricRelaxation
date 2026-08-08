@@ -9,6 +9,64 @@ import math
 from utillib import fittinglib
 
 
+def get_distance_point_point(p1, p2):
+    """
+    计算两点之间的距离，支持多种格式
+
+    Args:
+        p1: 点1，可以是 Point 对象、列表 [x,y] 或元组 (x,y)
+        p2: 点2，格式同 p1
+
+    Returns:
+        float: 两点间的距离
+    """
+    # 处理 p1
+    if hasattr(p1, 'x') and hasattr(p1, 'y'):
+        x1, y1 = p1.x, p1.y
+    elif isinstance(p1, (list, tuple)) and len(p1) >= 2:
+        x1, y1 = p1[0], p1[1]
+    else:
+        raise ValueError(f"不支持的坐标格式: {type(p1)}")
+
+    # 处理 p2
+    if hasattr(p2, 'x') and hasattr(p2, 'y'):
+        x2, y2 = p2.x, p2.y
+    elif isinstance(p2, (list, tuple)) and len(p2) >= 2:
+        x2, y2 = p2[0], p2[1]
+    else:
+        raise ValueError(f"不支持的坐标格式: {type(p2)}")
+
+    distance = math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2))
+    return distance
+
+
+def angle_by_three_points(p1, vertex, p2):
+    """
+    根据三个点计算几何夹角，vertex 为角顶点。
+
+    返回值范围为 [0, π]（恒 ≤180°），即纯几何夹角，不区分凹角/优角。
+    适用于细胞内角计算：退火凸性守卫已保证细胞恒为凸多边形，
+    故每个顶点的真实内角均 ≤180°，无需优角分支。
+
+    Args:
+        p1: 角的一条边的端点，list/tuple [x, y]
+        vertex: 角顶点，list/tuple [x, y]
+        p2: 角的另一条边的端点，list/tuple [x, y]
+
+    Returns:
+        float: 夹角（弧度），范围 [0, π]
+    """
+    v1 = (p1[0] - vertex[0], p1[1] - vertex[1])
+    v2 = (p2[0] - vertex[0], p2[1] - vertex[1])
+    dot_product = v1[0] * v2[0] + v1[1] * v2[1]
+    mag1 = math.hypot(*v1)
+    mag2 = math.hypot(*v2)
+    if math.isclose(mag1 * mag2, 0):
+        return 0
+    cos_val = max(-1.0, min(1.0, dot_product / (mag1 * mag2)))
+    return math.acos(cos_val)
+
+
 # 点类
 # Point class
 class Point:
@@ -72,8 +130,6 @@ class Cell:
 
     # 拟合数据
     data = None
-    # 拟合辅助点
-    add_points = None
 
     def __init__(self,points):
         self.ok = True  # 是否不在边缘 Not on the edge
@@ -99,7 +155,7 @@ class Cell:
     def setVertex(self):
         points=self.points
         if len(points) <= 2:
-            return list()
+            return
 
         area = Decimal(0.0)
         x, y = Decimal(0.0), Decimal(0.0)
@@ -140,10 +196,8 @@ class Cell:
 
     # 椭圆拟合部分
     # value 为阈值
-    def like_ellipse(self,
-                     rotate_angle):  # 椭圆拟合 ，传入数据为插值法旋转角度 Ellipse fitting, the input data is interpolation rotation angle
+    def like_ellipse(self):  # 椭圆拟合 Ellipse fitting
         points = self.points[:]  # 获取细胞点集合 Get cell point collection
-        nn = len(points)  # 细胞边数
         # Since the starting point and the ending point coincide in the cell class, the number of vertices existing
         # in the cell class should be the number of cell edges minus the length of the point set
         # fitting() (V13.0) 直接返回几何参数 [cx, cy, a, b, theta]
@@ -152,13 +206,8 @@ class Cell:
         data = self.make_final_ellipse(geo)
 
         # print("拟合前后点集",self.points, points)
-        add_points = []
-        for p in points:
-            if p not in self.points:
-                add_points.append(p)
         self.data = data
-        self.add_points = add_points
-        return data, add_points
+        return data
 
     def make_final_ellipse(self, geo):
         # geo 为 fitting() 返回的几何参数 [cx, cy, a, b, theta]；
@@ -217,7 +266,7 @@ class CellBlock:
     #计算三角形重心 Calculate the center of gravity of the triangle
     def getTriCentreOfGravity(self):
         if self.triangle[2] is None:
-            print(self.triangle[2])
+            raise ValueError("triangle[2] is None, cannot compute centre of gravity")
         x1 = self.triangle[0].x
         y1 = self.triangle[0].y
         x2 = self.triangle[1].x

@@ -19,11 +19,9 @@
 """
 import os
 import sys
-import random
 import math
 import time
 import shutil
-import datetime
 import warnings
 
 # Windows DPI 感知设置（必须在导入 tkinter 之前）
@@ -40,7 +38,7 @@ os.chdir(current_dir)
 sys.path.append(current_dir)
 
 import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog, filedialog
+from tkinter import ttk, messagebox, filedialog
 
 # 初始化 Tk 根窗口（必须在导入 matplotlib 之前）
 root = tk.Tk()
@@ -935,7 +933,7 @@ class AnnealingGUI:
 
         try:
             for c in cellData.cells:
-                c.like_ellipse(1)
+                c.like_ellipse()
             cellData.list_line_of_cell()
             self._display(show_ellipse=True)
         except Exception as e:
@@ -951,7 +949,7 @@ class AnnealingGUI:
         try:
             cellData.list_line_of_cell()
             for c in cellData.cells:
-                c.like_ellipse(1)
+                c.like_ellipse()
         except Exception as e:
             messagebox.showerror(_('error'), _('error_export_prepare').format(error=str(e)), parent=self.root)
             return
@@ -967,18 +965,11 @@ class AnnealingGUI:
         directory = os.path.dirname(file_path) or os.getcwd()
         base_name = os.path.splitext(os.path.basename(file_path))[0] or "export"
         timestamp = int(time.time())
-        marginal_point_judge = getattr(annealer, 'marginal_point_judge', 1) if annealer else 1
-
-        try:
-            ignore = int(float(param2)) if param2 is not None else 0
-        except Exception:
-            ignore = 0
-        N = getattr(cellData, 'length', len(cellData.cells))
 
         try:
             success = exportUtils.create(
                 "export", cellData.cells, cellData.lineOfCell,
-                marginal_point_judge, N, ignore, currentTimes=timestamp
+                currentTimes=timestamp
             )
             if not success:
                 messagebox.showerror(_('error'), _('error_export'), parent=self.root)
@@ -1205,7 +1196,7 @@ class AnnealingGUI:
             # 椭圆
             if show_ellipse:
                 try:
-                    ellipse_data, add_points = cell.like_ellipse(1)
+                    ellipse_data = cell.like_ellipse()
                     x, y = get_ellipse(
                         ellipse_data['cp'].x, ellipse_data['cp'].y,
                         ellipse_data['a'], ellipse_data['b'],

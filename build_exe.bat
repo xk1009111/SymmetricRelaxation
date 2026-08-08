@@ -1,42 +1,53 @@
 @echo off
-chcp 65001 >nul
-title 构建细胞退火工具 EXE
+REM ============================================
+REM  Build Script for Windows - PyInstaller EXE
+REM  Cell Annealing Tool
+REM  Uses the project .venv (Python 3.14) created by setup.bat
+REM ============================================
+
+title Build Cell Annealing EXE
 
 echo ============================================
-echo  细胞退火工具 - PyInstaller 打包脚本
+echo  Cell Annealing Tool - PyInstaller Build
 echo ============================================
 echo.
 
-REM 切换到脚本所在目录
+REM Switch to script directory
 cd /d "%~dp0"
 
-REM 安装依赖（如已安装可跳过）
-echo [1/3] 检查并安装依赖...
-pip install -r requirements.txt
-if %errorlevel% neq 0 (
-    echo 安装依赖失败，请检查网络连接或手动安装。
+REM Check .venv exists
+if not exist ".venv\Scripts\python.exe" (
+    echo [ERROR] .venv not found. Please run setup.bat or upgrade_to_314.bat first.
     pause
     exit /b 1
 )
 
-REM 安装 PyInstaller
-echo [2/3] 检查 PyInstaller...
-pip install pyinstaller
+REM Install dependencies (skip if already installed)
+echo [1/3] Ensuring dependencies are installed...
+uv pip install -r requirements.txt
 if %errorlevel% neq 0 (
-    echo 安装 PyInstaller 失败。
+    echo [ERROR] Failed to install dependencies.
     pause
     exit /b 1
 )
 
-REM 执行打包
-echo [3/3] 开始打包...
+REM Install PyInstaller into .venv
+echo [2/3] Ensuring PyInstaller is installed...
+uv pip install pyinstaller
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to install PyInstaller.
+    pause
+    exit /b 1
+)
+
+REM Build
+echo [3/3] Building...
 echo.
-echo 正在打包为单文件 EXE（无控制台窗口）...
-pyinstaller --onefile --windowed --name "CellAnnealing" ^
+echo Building single-file EXE (no console window)...
+".venv\Scripts\python.exe" -m PyInstaller --onefile --windowed --name "CellAnnealing" ^
     --add-data "annealing;annealing" ^
     --add-data "cell;cell" ^
     --add-data "utillib;utillib" ^
-    --add-data "randomSet;randomSet" ^
     --add-data "initVoronoi.py;." ^
     --hidden-import "scipy.spatial" ^
     --hidden-import "scipy.optimize" ^
@@ -47,12 +58,12 @@ pyinstaller --onefile --windowed --name "CellAnnealing" ^
 if %errorlevel% equ 0 (
     echo.
     echo ============================================
-    echo  ✓ 打包成功！
-    echo   输出文件: dist\CellAnnealing.exe
+    echo  Build succeeded!
+    echo   Output: dist\CellAnnealing.exe
     echo ============================================
 ) else (
     echo.
-    echo  × 打包失败，请检查错误信息。
+    echo  Build failed. Check the error messages above.
 )
 
 pause

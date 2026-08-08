@@ -118,14 +118,27 @@ setup_portable_r()
 # =========================================================================
 os.environ["LC_ALL"] = "C"
 # 必须在设置完环境变量后，再 import rpy2
-import rpy2.robjects as robjects
+# [升级适配 Python 3.14] rpy2 为可选依赖：装得上则用 R-LMG 高精度拟合；
+# 装不上（如目标 Python 暂无对应 wheel，或 R 运行时缺失）则降级为
+# 纯 Python/scipy 拟合，不阻塞主程序启动。fitting_call_R_conicfit
+# 在不可用时直接返回 None，由 fitting() 的多阶段策略走代数法兜底。
+_RPY2_AVAILABLE = False
+robjects = None
+importr = None
+numpy2ri = None
+conversion = None
+try:
+    import rpy2.robjects as robjects
+    from rpy2.robjects.packages import importr
+    from rpy2.robjects import numpy2ri
+    # 激活 numpy 到 R 矩阵的自动转换
+    from rpy2.robjects import conversion
+    _RPY2_AVAILABLE = True
+except Exception as _rpy2_err:
+    print(f"[fittinglib] rpy2 不可用，椭圆拟合将使用纯 Python 方式 (scipy/最小二乘)。原因: {_rpy2_err}")
 import math
 import numpy as np
 from pyenvelope import get_minimum_bounding_rectangle # [新增] MBR支持
-from rpy2.robjects.packages import importr
-from rpy2.robjects import numpy2ri
-# 激活 numpy 到 R 矩阵的自动转换
-from rpy2.robjects import conversion
 
 
 def re_ellipse_fitting(points, eps=1e-12):
@@ -353,13 +366,6 @@ def check_ls_quality(can_shu, points, poly_area):
         print(f"校验过程出错: {e}")
         return False
 
-def check_ls_quality_v5(can_shu, points, poly_area):
-    """
-    V5版本的拟合质量检查，面积比合格范围为1.0~3.0
-    返回: True (合格), False (异常)
-    """
-    return check_ls_quality(can_shu, points, poly_area)
-
 def fitting_call_R_conicfit(points, init_points=None):
     """
     [修改后] 调用 R 语言 fit.ellipseLMG，使用老师指定的 ParGini 初值
@@ -369,6 +375,8 @@ def fitting_call_R_conicfit(points, init_points=None):
     返回：
         几何参数数组 [cx, cy, a, b, theta]，R失败时返回 None（不回退）
     """
+    if not _RPY2_AVAILABLE:
+        return None
     try:
         pts_np = np.array(points)
 
@@ -429,7 +437,7 @@ def fitting(points, center_point, area):
             print(f"round1 代数拟合失败: {e}")
             geo_round1 = None
 
-        if geo_round1 is not None and check_ls_quality_v5(geo_round1, points, area):
+        if geo_round1 is not None and check_ls_quality(geo_round1, points, area):
             final_geo = geo_round1
         else:
             # Round 2: 代数法，2n点
@@ -440,7 +448,7 @@ def fitting(points, center_point, area):
                 print(f"round2 代数拟合失败: {e}")
                 geo_round2 = None
 
-            if geo_round2 is not None and check_ls_quality_v5(geo_round2, points, area):
+            if geo_round2 is not None and check_ls_quality(geo_round2, points, area):
                 final_geo = geo_round2
             else:
                 # Round 3: R LMG，2n点，2n点MBR初值
@@ -450,7 +458,7 @@ def fitting(points, center_point, area):
                     print(f"round3 R LMG拟合失败: {e}")
                     geo_round3 = None
 
-                if geo_round3 is not None and check_ls_quality_v5(geo_round3, points, area):
+                if geo_round3 is not None and check_ls_quality(geo_round3, points, area):
                     final_geo = geo_round3
                 # Round 3 失败或不合格，直接进保底
 
@@ -464,7 +472,7 @@ def fitting(points, center_point, area):
             print(f"round1 R LMG拟合失败: {e}")
             geo_round1 = None
 
-        if geo_round1 is not None and check_ls_quality_v5(geo_round1, points, area):
+        if geo_round1 is not None and check_ls_quality(geo_round1, points, area):
             final_geo = geo_round1
         else:
             # Round 2: 代数法，2n点
@@ -475,7 +483,7 @@ def fitting(points, center_point, area):
                 print(f"round2 代数拟合失败: {e}")
                 geo_round2 = None
 
-            if geo_round2 is not None and check_ls_quality_v5(geo_round2, points, area):
+            if geo_round2 is not None and check_ls_quality(geo_round2, points, area):
                 final_geo = geo_round2
             else:
                 # Round 3: R LMG，2n点，2n点MBR初值
@@ -485,7 +493,7 @@ def fitting(points, center_point, area):
                     print(f"round3 R LMG拟合失败: {e}")
                     geo_round3 = None
 
-                if geo_round3 is not None and check_ls_quality_v5(geo_round3, points, area):
+                if geo_round3 is not None and check_ls_quality(geo_round3, points, area):
                     final_geo = geo_round3
                 # Round 3 失败或不合格，直接进保底
 

@@ -2,6 +2,7 @@
 REM ============================================
 REM  Setup Script for Windows
 REM  Cell Annealing Tool - Symmetric Relaxation of 2D Cellular Networks
+REM  Requires Python 3.14+ managed via uv
 REM ============================================
 
 setlocal enabledelayedexpansion
@@ -11,22 +12,29 @@ echo  Cell Annealing Tool - Environment Setup
 echo ============================================
 echo.
 
-REM ---- Step 1: Check Python ----
-echo [1/4] Checking Python installation...
-python --version >nul 2>&1
+REM ---- Step 1: Check uv, install Python 3.14.6, create .venv ----
+echo [1/4] Checking uv installation...
+uv --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [ERROR] Python is not found. Please install Python 3.8+ from:
-    echo         https://www.python.org/downloads/
+    echo [ERROR] uv is not found. Please install uv first:
+    echo         https://docs.astral.sh/uv/getting-started/installation/
     pause
     exit /b 1
 )
-echo [OK] Python detected:
-python --version
+echo [OK] uv detected:
+uv --version
+echo.
+echo       Installing Python 3.14.6 and creating .venv...
+uv python install 3.14.6
+if not exist ".venv" (
+    uv venv .venv --python 3.14.6
+)
+echo [OK] .venv is ready.
 
 REM ---- Step 2: Install Python dependencies ----
 echo.
 echo [2/4] Installing Python dependencies...
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 if %errorlevel% neq 0 (
     echo [ERROR] Failed to install Python dependencies.
     pause
@@ -41,7 +49,7 @@ echo [3/4] Checking R environment...
 REM Try using bundled R_Dist first
 set "R_CMD="
 if exist "%~dp0R_Dist\bin\x64\R.exe" (
-    echo [INFO] Found bundled R_Dist (64-bit).
+    echo [INFO] Found bundled R_Dist, 64-bit.
     set "R_CMD=%~dp0R_Dist\bin\x64\R.exe"
     set "RSCRIPT_CMD=%~dp0R_Dist\bin\x64\Rscript.exe"
     set "R_HOME=%~dp0R_Dist"
@@ -59,10 +67,10 @@ if exist "%~dp0R_Dist\bin\x64\R.exe" (
         set "RSCRIPT_CMD=Rscript"
     ) else (
         echo.
-        echo [WARNING] R is not found (neither bundled R_Dist nor system R).
+        echo [WARNING] R is not found - neither bundled R_Dist nor system R.
         echo.
         echo  Would you like to download and install R to R_Dist automatically?
-        echo  (Requires about 300 MB, internet connection needed)
+        echo   Requires about 300 MB, internet connection needed.
         echo.
         choice /C YN /M "Download and install R to R_Dist?"
         if !errorlevel! equ 1 (
@@ -129,6 +137,6 @@ if %errorlevel% neq 0 (
 echo.
 echo ============================================
 echo  Setup complete! You can now run:
-echo      python only_annealing_main.py
+echo      uv run python only_annealing_main.py
 echo ============================================
 pause
